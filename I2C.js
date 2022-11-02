@@ -36,7 +36,7 @@ class I2C extends CH341 {
   static I2C_AddressMax = 0x7F;
   static I2C_TIMEOUT = 10
 
-  async setAddr(addr) {
+  setAddr(addr) {
     this.addr = addr
   }
 
@@ -44,14 +44,14 @@ class I2C extends CH341 {
     const command = new Uint8Array([I2C.I2C, I2C.STA, I2C.OUT, i2c_addr << 1, I2C.STO, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
     const result = await this.requestFrom()
-    return (result & I2C.OUT) == 0
+    return (result[0] & I2C.OUT) == 0
   }
 
   async WriteByte(bb) {
     const command = new Uint8Array([I2C.I2C, I2C.OUT, bb, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
     const result = await this.requestFrom()
-    return (result & I2C.OUT) == 0
+    return (result[0] & I2C.OUT) == 0
   }
 
   async I2CStart() {
@@ -72,41 +72,48 @@ class I2C extends CH341 {
     return new Uint8Array(result.data.buffer)
   }
 
-  async ReadByteACK() {
+  async ReadByteAck() {
     const command = new Uint8Array([I2C.I2C, I2C.IN_ACK, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
     const result = await this.requestFrom()
     return result[0];
   }
 
-  async ReadByteNAK() {
+  async ReadByteNak() {
     const command = new Uint8Array([I2C.I2C, I2C.IN_NAK, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
     const result = await this.requestFrom()
     return result[0];
   }
 
-  async ReadGPIO(number) {
+  async ReadPin(number) {
     const command = new Uint8Array([I2C.UIO, I2C.UIO_DIR, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
     const result = await this.requestFrom()
-    return (result & (1 << number)) != 0;
+    return (result[0] & (1 << number));
   }
 
-  async read8(addr) {
-    await this.I2CStart(_i2caddr);
-    await this.write(addr);
-    await this.I2CStop();
-
-    await this.requestFrom(_i2caddr, 1);
-    return await this.read();
+  async ReadData(reg) {
+    this.I2CStart();
+    this.WriteByte(this.addr << 1);
+    this.WriteByte(reg);
+    this.I2CStop();
+    this.I2CStart();
+    this.WriteByte(this.addr << 1 | 1);
+    this.ReadByteAck();
+    const data = this.ReadPin(reg);
+    this.ReadByteNak();
+    this.I2CStop();
+    return data;
   }
 
-  async write8(addr, d) {
-    await this.I2CStart(_i2caddr);
-    await this.write(addr);
-    await this.write(d);
-    await this.I2CStop();
+  async WriteData(reg, data) {
+    this.I2CStart();
+    this.WriteByte(this.addr << 1);
+    this.WriteByte(reg);
+    const result = this.WriteByte(data);
+    this.I2CStop();
+    return result;
   }
 
 }
