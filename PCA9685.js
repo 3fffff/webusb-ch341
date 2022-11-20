@@ -38,8 +38,8 @@ class PCA9685 {
   static PWM_ON_H = 0x0;
   static PWM_OFF_L = 0x02;
   static PWM_OFF_H = 0x03;
-  constructor(ch341) {
-    this.ch341 = ch341
+  constructor(dev) {
+    this.dev = dev
     this.pre_right = -1000
     this.pre_left = -1000
   }
@@ -69,21 +69,21 @@ class PCA9685 {
     Issuing an Sr leaves the bus input filters in their current state.
      */
 
-    const oldmode = await this.ch341.ReadData(PCA9685.MODE1);
+    const oldmode = await this.dev.ReadData(PCA9685.MODE1);
     const newmode = ((oldmode & 0x7F) | 0x10); //# sleep
-    const r = await this.ch341.WriteData(PCA9685.MODE1, newmode);  //# go to sleep
-    const r1 = await this.ch341.WriteData(PCA9685.PRESCALE, Math.floor(prescale));
-    const r2 = await this.ch341.WriteData(PCA9685.MODE1, oldmode);
-    await CH341.wait(5)
-    const r3 = await this.ch341.WriteData(PCA9685.MODE1, oldmode | 0x80);
+    const r = await this.dev.WriteData(PCA9685.MODE1, newmode);  //# go to sleep
+    const r1 = await this.dev.WriteData(PCA9685.PRESCALE, Math.floor(prescale));
+    const r2 = await this.dev.WriteData(PCA9685.MODE1, oldmode);
+    await dev.wait(5)
+    const r3 = await this.dev.WriteData(PCA9685.MODE1, oldmode | 0x80);
   }
 
   async setPWM(channel, on, off) {
     console.log(`channel: ${channel}  LED_ON: ${on} LED_OFF: ${off}`);
-    const r0 = await this.ch341.WriteData(PCA9685.LED0_ON_L + 4 * channel, on & 0xFF);
-    const r1 = await this.ch341.WriteData(PCA9685.LED0_ON_H + 4 * channel, on >> 8);
-    const r2 = await this.ch341.WriteData(PCA9685.LED0_OFF_L + 4 * channel, off & 0xFF);
-    const r3 = await this.ch341.WriteData(PCA9685.LED0_OFF_H + 4 * channel, off >> 8);
+    const r0 = await this.dev.WriteData(PCA9685.LED0_ON_L + 4 * channel, on & 0xFF);
+    const r1 = await this.dev.WriteData(PCA9685.LED0_ON_H + 4 * channel, on >> 8);
+    const r2 = await this.dev.WriteData(PCA9685.LED0_OFF_L + 4 * channel, off & 0xFF);
+    const r3 = await this.dev.WriteData(PCA9685.LED0_OFF_H + 4 * channel, off >> 8);
   }
   async setServoPulse(channel, pulse) {
     pulse = (pulse * 4096 / 20000);  // PWM frequency is 50HZ,the period is 20000us

@@ -20,21 +20,32 @@
 <script src="UART.js"></script>
 <script src="I2C.js"></script>
 <script src="PCA9685.js"></script>
+<script src="VL531L1X.js"></script>
 <script>
   const serial = new UART()
   const i2c = new I2C()
   document.querySelector("#connect").onclick = async () => {
     const device = await CH341.requestDevice()
     await i2c.open(device)
-    /* await serial.initSerial(9600)
-     await serial.startRx(data => console.log(String.fromCharCode(...data)))*/
-    let foud_count = 0;
-    for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i) {
-      if (await i2c.I2CDetect(i)) {
-        ++foud_count;
-        console.log(`Found i2c slave device at address 0x${i.toString(16)}`);
-      }
-    }
+    const result = await i2c.GetPinsStatus()
+    console.log(result)
+    await i2c.SetPin(CH341.D0)
+    const res = await i2c.GetPinsStatus()
+    console.log(res)
+    /* await i2c.open(device)
+     await serial.initSerial(9600)
+     await serial.startRx(data => console.log(String.fromCharCode(...data)))
+     let foud_count = 0;
+     for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i) {
+       if (await i2c.I2CDetect(i)) {
+         ++foud_count;
+         console.log(`Found i2c slave device at address 0x${i.toString(16)}`);
+       }
+     }
+     const vl531l1x = new VL531L1X(i2c)
+     i2c.setAddr(0x29)
+     const res = await vl531l1x.GetSensorId()
+     console.log(res)*/
     /*const addr = 0x40
     i2c.setAddr(addr)
     const pca = new PCA9685(i2c)
@@ -44,7 +55,7 @@
       await pca.analog_write(0, i)
       await CH341.wait(30);
     }*/
-    console.log(`Scan complete, ${foud_count} found.`);
+    //  console.log(`Scan complete, ${foud_count} found.`);
   }
 
   document.querySelector("#disconnect").onclick = async () => {

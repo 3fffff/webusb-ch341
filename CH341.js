@@ -2,7 +2,46 @@ class CH341 {
   static REQUEST_READ_VERSION = 0x5F
   static USB_CONFIG_STANDARD = 1
   static INTERFACE = 0
+  //pins 
+  static ERR = 0x100
+  static PEMP = 0x200
+  static INT = 0x400
+  static SLCT = 0x800
+  static WAIT = 0x2000
+  static DATAS = 0x4000
+  static ADDRS = 0x8000
+  static RESET = 0x10000
+  static DXX = 0xff000000
+  static MAX_PIN_READ = 7
+  static MAX_PIN_WRITE = 5
 
+  static USB_TIMEOUT = 1000
+
+  static DEV_CONTROL_CFG = 0xC0
+  static DEV_CONTROL_BUF_LEN = 8
+
+
+  //CH341 pin
+  static D0 = 0x01
+  static D1 = 0x02
+  static D2 = 0x04
+  static D3 = 0x08
+  static D4 = 0x10
+  static D5 = 0x20
+  static GPIO_NUM_PINS = 16    /* Number of GPIO pins */
+
+  static PARA_CMD_STS = 0xA0  /* Get pins status */
+  static CMD_UIO_STREAM = 0xAB  /* UIO stream command */
+
+  static CMD_UIO_STM_IN = 0x00  /* UIO interface IN command (D0~D7) */
+  static CMD_UIO_STM_OUT = 0x80  /* UIO interface OUT command (D0~D5) */
+  static CMD_UIO_STM_DIR = 0x40  /* UIO interface DIR command (D0~D5) */
+  static CMD_UIO_STM_END = 0x20  /* UIO interface END command */
+  static US_MASK = 0x1F  //Up to 32 (approx) us delay
+  static CMD_UIO_STM_US = 0xC0
+  static DELAY_US = CH341.CMD_UIO_STM_US | 1
+  static DELAY_31US = CH341.CMD_UIO_STM_US | CH341.US_MASK
+  static DELAY_10US = CH341.CMD_UIO_STM_US | 10
   static async requestDevice(filters) {
     const device = await navigator.usb.requestDevice({
       filters: filters || [
@@ -69,6 +108,32 @@ class CH341 {
         }
       })
     })
+  }
+
+  async SetPin(pin) {
+    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_DIR | 0x3F,// mask for D0-D5
+    CH341.CMD_UIO_STM_OUT | pin, CH341.CMD_UIO_STM_END]);
+    await this.device.transferOut(this.endpointOut, command);
+  }
+  /* The status command returns 6 bytes of data. Byte 0 has
+   * status for lines 0 to 7, and byte 1 is lines 8 to 15. The
+   * 3rd has the status for the SCL/SDA/SCK pins. The 4th byte
+   * might have some remaining pin status. Byte 5 and 6 content
+   * is unknown.
+   */
+  async GetPinsStatus() {
+    const command = new Uint8Array([CH341.PARA_CMD_STS])
+    await this.device.transferOut(this.endpointOut, command);
+    const request = await this.receiveByte()
+    const result = new Uint8Array(request)
+    CH341.lastwriten = result[0]
+    return (result[0] >>> 0).toString(2);
+  }
+  async receiveByte(byte = 1) {
+    //await I2C.wait(I2C.I2C_TIMEOUT)
+    const result = await this.device.transferIn(this.endpointIn, byte * 8);
+    //console.log(result.data.buffer.byteLength)
+    return result.data.buffer
   }
 
   async exit() {
