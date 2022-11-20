@@ -158,7 +158,11 @@ class I2C extends CH341 {
     await this.I2CStart();
     await this.WriteByte(this.addr << 1 | 1);
     await this.ReadByteAck();
+<<<<<<< HEAD
     for (let i = 0; i < data.length; i++) {
+=======
+    for (let i = 0; i < data.length; i++){
+>>>>>>> c098a30d0ec4da926fd98d34221eed9627fed10b
       data[i] = await this.ReadByte(reg);
       await this.ReadByteNak();
     }
@@ -184,4 +188,8 @@ class I2C extends CH341 {
       await this.WriteByte(reg & 0xFF);//LSB
     }
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> c098a30d0ec4da926fd98d34221eed9627fed10b
