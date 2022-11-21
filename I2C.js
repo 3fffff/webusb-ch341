@@ -53,14 +53,14 @@ class I2C extends CH341 {
   async I2CStart() {
     const command = new Uint8Array([I2C.I2C, I2C.STA, I2C.END])
     const result = await this.device.transferOut(this.endpointOut, command);
-    await I2C.wait(I2C.I2C_TIMEOUT)
+    await this.wait(I2C.I2C_TIMEOUT)
     return result
   }
 
   async I2CStop() {
     const command = new Uint8Array([I2C.I2C, I2C.STO, I2C.END])
     const result = await this.device.transferOut(this.endpointOut, command);
-    await I2C.wait(I2C.I2C_TIMEOUT)
+    await this.wait(I2C.I2C_TIMEOUT)
     return result
   }
 
@@ -79,16 +79,16 @@ class I2C extends CH341 {
     return (result[0] & I2C.OUT) == 0
   }
 
-  async Write8Data(reg, bb, reg16bit) {
+  async Write8Data(reg, bb, reg16bit = false) {
     const b = new Uint16Array([bb])
     await this.WriteData(reg, b, reg16bit)
   }
-  async Write16Data(reg, bb, reg16bit) {
+  async Write16Data(reg, bb, reg16bit = false) {
     const b = new Uint8Array([(bb >> 8) & 0xFF, bb & 0xFF])
     await this.WriteData(reg, b, reg16bit)
   }
 
-  async Write32Data(reg, bb, reg16bit) {
+  async Write32Data(reg, bb, reg16bit = false) {
     const b = new Uint8Array([(bb >> 24) & 0xFF, (bb >> 16) & 0xFF, (bb >> 8) & 0xFF, bb & 0xFF])
     await this.WriteData(reg, b, reg16bit)
   }
@@ -158,11 +158,8 @@ class I2C extends CH341 {
     await this.I2CStart();
     await this.WriteByte(this.addr << 1 | 1);
     await this.ReadByteAck();
-<<<<<<< HEAD
+
     for (let i = 0; i < data.length; i++) {
-=======
-    for (let i = 0; i < data.length; i++){
->>>>>>> c098a30d0ec4da926fd98d34221eed9627fed10b
       data[i] = await this.ReadByte(reg);
       await this.ReadByteNak();
     }
@@ -188,8 +185,4 @@ class I2C extends CH341 {
       await this.WriteByte(reg & 0xFF);//LSB
     }
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> c098a30d0ec4da926fd98d34221eed9627fed10b

@@ -27,11 +27,18 @@
   document.querySelector("#connect").onclick = async () => {
     const device = await CH341.requestDevice()
     await i2c.open(device)
-    const result = await i2c.GetPinsStatus()
+    let foud_count = 0;
+    for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i) {
+      if (await i2c.I2CDetect(i)) {
+        ++foud_count;
+        console.log(`Found i2c slave device at address 0x${i.toString(16)}`);
+      }
+    }
+    /*const result = await i2c.GetPinsStatus()
     console.log(result)
     await i2c.SetPin(CH341.D0)
     const res = await i2c.GetPinsStatus()
-    console.log(res)
+    console.log(res)*/
     /* await i2c.open(device)
      await serial.initSerial(9600)
      await serial.startRx(data => console.log(String.fromCharCode(...data)))
@@ -46,15 +53,15 @@
      i2c.setAddr(0x29)
      const res = await vl531l1x.GetSensorId()
      console.log(res)*/
-    /*const addr = 0x40
+    const addr = 0x40
     i2c.setAddr(addr)
     const pca = new PCA9685(i2c)
     await pca.setPWMFreq(1000);
     for (let i = 20; i < 40; i += 5) {
-      //await pca.setServoAngle(0, i);
-      await pca.analog_write(0, i)
-      await CH341.wait(30);
-    }*/
+      await pca.setServoAngle(0, i);
+      //await pca.analog_write(0, i)
+      await i2c.wait(30);
+    }
     //  console.log(`Scan complete, ${foud_count} found.`);
   }
 

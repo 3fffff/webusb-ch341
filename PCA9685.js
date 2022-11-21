@@ -71,19 +71,19 @@ class PCA9685 {
 
     const oldmode = await this.dev.ReadData(PCA9685.MODE1);
     const newmode = ((oldmode & 0x7F) | 0x10); //# sleep
-    const r = await this.dev.WriteData(PCA9685.MODE1, newmode);  //# go to sleep
-    const r1 = await this.dev.WriteData(PCA9685.PRESCALE, Math.floor(prescale));
-    const r2 = await this.dev.WriteData(PCA9685.MODE1, oldmode);
-    await dev.wait(5)
-    const r3 = await this.dev.WriteData(PCA9685.MODE1, oldmode | 0x80);
+    await this.dev.Write8Data(PCA9685.MODE1, newmode);  //# go to sleep
+    await this.dev.Write8Data(PCA9685.PRESCALE, Math.floor(prescale));
+    await this.dev.Write8Data(PCA9685.MODE1, oldmode);
+    await this.dev.wait(5)
+    await this.dev.Write8Data(PCA9685.MODE1, oldmode | 0x80);
   }
 
   async setPWM(channel, on, off) {
     console.log(`channel: ${channel}  LED_ON: ${on} LED_OFF: ${off}`);
-    const r0 = await this.dev.WriteData(PCA9685.LED0_ON_L + 4 * channel, on & 0xFF);
-    const r1 = await this.dev.WriteData(PCA9685.LED0_ON_H + 4 * channel, on >> 8);
-    const r2 = await this.dev.WriteData(PCA9685.LED0_OFF_L + 4 * channel, off & 0xFF);
-    const r3 = await this.dev.WriteData(PCA9685.LED0_OFF_H + 4 * channel, off >> 8);
+    await this.dev.Write8Data(PCA9685.LED0_ON_L + 4 * channel, on & 0xFF);
+    await this.dev.Write8Data(PCA9685.LED0_ON_H + 4 * channel, on >> 8);
+    await this.dev.Write8Data(PCA9685.LED0_OFF_L + 4 * channel, off & 0xFF);
+    await this.dev.Write8Data(PCA9685.LED0_OFF_H + 4 * channel, off >> 8);
   }
   async setServoPulse(channel, pulse) {
     pulse = (pulse * 4096 / 20000);  // PWM frequency is 50HZ,the period is 20000us

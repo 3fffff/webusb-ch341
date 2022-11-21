@@ -126,11 +126,10 @@ class CH341 {
     await this.device.transferOut(this.endpointOut, command);
     const request = await this.receiveByte()
     const result = new Uint8Array(request)
-    CH341.lastwriten = result[0]
     return (result[0] >>> 0).toString(2);
   }
   async receiveByte(byte = 1) {
-    //await I2C.wait(I2C.I2C_TIMEOUT)
+    //await this.wait(I2C.I2C_TIMEOUT)
     const result = await this.device.transferIn(this.endpointIn, byte * 8);
     //console.log(result.data.buffer.byteLength)
     return result.data.buffer
@@ -141,7 +140,7 @@ class CH341 {
     await this.device.close();
   }
 
-  static async wait(ms) {
+  async wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
   }
 }
