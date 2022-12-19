@@ -1,4 +1,4 @@
-class PCA9685 {
+export class PCA9685 {
 
   // регистры для задания дополнительных адресов I2C
   static SUBADR1 = 0x02;

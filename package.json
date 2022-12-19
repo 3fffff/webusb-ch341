@@ -1,0 +1,22 @@
+{
+  "name": "webusb-ch341",
+  "version": "1.0.0",
+  "description": "webusb-CH341",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/3fffff/webusb-ch341.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/3fffff/webusb-ch341/issues"
+  },
+  "homepage": "https://github.com/3fffff/webusb-ch341#readme",
+  "dependencies": {
+    "parcel": "^2.8.2"
+  }
+}

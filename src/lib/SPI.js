@@ -1,4 +1,6 @@
-class SPI extends CH341 {
+import {CH341} from "./CH341.js"
+
+export class SPI extends CH341 {
   static MODE0 = 0x00
   static MODE1 = 0x04
   static MIN_FREQ = 400

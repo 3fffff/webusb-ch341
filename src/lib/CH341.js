@@ -1,4 +1,4 @@
-class CH341 {
+export class CH341 {
   static REQUEST_READ_VERSION = 0x5F
   static USB_CONFIG_STANDARD = 1
   static INTERFACE = 0

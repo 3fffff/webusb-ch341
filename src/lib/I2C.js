@@ -1,4 +1,6 @@
-class I2C extends CH341 {
+import {CH341} from "./CH341.js"
+
+export class I2C extends CH341 {
   //I2C commands
   static STA = 0x74
   static STO = 0x75

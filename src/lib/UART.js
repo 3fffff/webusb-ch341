@@ -1,4 +1,6 @@
-class UART extends CH341 {
+import {CH341} from "./CH341.js"
+
+export class UART extends CH341 {
   static DEFAULT_BAUD_RATE = 115200
 
   static REQUEST_READ_REGISTRY = 0x95

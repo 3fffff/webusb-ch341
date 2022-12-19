@@ -16,12 +16,14 @@
   <button id="submit">Send</button>
   <label for="output">RX</label><textarea id="output"></textarea>
 </body>
-<script src="CH341.js"></script>
-<script src="UART.js"></script>
-<script src="I2C.js"></script>
-<script src="PCA9685.js"></script>
-<script src="VL531L1X.js"></script>
-<script>
+<script type="module">
+  import { CH341 } from "./src/lib/I2C"
+  import { SPI } from "./src/lib/SPI"
+  import { UART } from "./src/lib/UART"
+  import { I2C } from "./src/lib/I2C"
+  import { PCA9685 } from "./src/PCA9685"
+  import { VL531L1X } from "./src/VL531L1X"
+
   const serial = new UART()
   const i2c = new I2C()
   document.querySelector("#connect").onclick = async () => {
