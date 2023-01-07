@@ -1,4 +1,4 @@
-import {CH341} from "./CH341.js"
+import { CH341 } from "./CH341.js"
 
 export class UART extends CH341 {
   static DEFAULT_BAUD_RATE = 115200

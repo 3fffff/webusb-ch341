@@ -17,25 +17,48 @@
   <label for="output">RX</label><textarea id="output"></textarea>
 </body>
 <script type="module">
-  import { CH341 } from "./src/lib/I2C"
-  import { SPI } from "./src/lib/SPI"
-  import { UART } from "./src/lib/UART"
-  import { I2C } from "./src/lib/I2C"
-  import { PCA9685 } from "./src/PCA9685"
-  import { VL531L1X } from "./src/VL531L1X"
+  import { CH341 } from "./src/lib/CH341.js"
+  import { SPI } from "./src/lib/SPI.js"
+  import { UART } from "./src/lib/UART.js"
+  import { I2C } from "./src/lib/I2C.js"
+  import { PCA9685 } from "./src/PCA9685.js"
+  import { VL531L1X } from "./src/VL531L1X.js"
 
-  const serial = new UART()
-  const i2c = new I2C()
   document.querySelector("#connect").onclick = async () => {
+    const ch341 = new CH341()
+    const device = await CH341.requestDevice()
+    await ch341.open(device)
+    await ch341.WritePin(CH341.SLCT, true)
+    const r = await ch341.GetPinsStatus()
+    console.log(r)
+    const tx = new Uint8Array([
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0x40, 0x00, 0x00, 0x00, 0x00, 0x95,
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+      0xDE, 0xAD, 0xBE, 0xEF, 0xBA, 0xAD,
+      0xF0, 0x0D]);
+    //await spi.startRx((result) => console.log(result))
+    // await spi.SpiStream(tx)
+    //const r = await spi.ReadStatus()
+    //console.log(r)
+    /*const serial = new UART()
+    const i2c = new I2C()
     const device = await CH341.requestDevice()
     await i2c.open(device)
-    let foud_count = 0;
+    await i2c.SetPin(CH341.D0, true)
+    const res = await i2c.GetPinsStatus()
+    console.log(res)
+    const r = await i2c.receiveByte()
+    console.log(r)*/
+    /*let foud_count = 0;
     for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i) {
       if (await i2c.I2CDetect(i)) {
         ++foud_count;
         console.log(`Found i2c slave device at address 0x${i.toString(16)}`);
       }
-    }
+    }*/
     /*const result = await i2c.GetPinsStatus()
     console.log(result)
     await i2c.SetPin(CH341.D0)
@@ -55,15 +78,6 @@
      i2c.setAddr(0x29)
      const res = await vl531l1x.GetSensorId()
      console.log(res)*/
-    const addr = 0x40
-    i2c.setAddr(addr)
-    const pca = new PCA9685(i2c)
-    await pca.setPWMFreq(1000);
-    for (let i = 20; i < 40; i += 5) {
-      await pca.setServoAngle(0, i);
-      //await pca.analog_write(0, i)
-      await i2c.wait(30);
-    }
     //  console.log(`Scan complete, ${foud_count} found.`);
   }
 

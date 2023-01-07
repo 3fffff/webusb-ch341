@@ -1,4 +1,4 @@
-import {CH341} from "./CH341.js"
+import { CH341 } from "./CH341.js"
 
 export class I2C extends CH341 {
   //I2C commands
