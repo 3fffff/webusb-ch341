@@ -37,6 +37,9 @@ export class CH341 {
   static CMD_UIO_STM_OUT = 0x80  /* UIO interface OUT command (D0~D5) */
   static CMD_UIO_STM_DIR = 0x40  /* UIO interface DIR command (D0~D5) */
   static CMD_UIO_STM_END = 0x20  /* UIO interface END command */
+  static PIN_MODE_OUT = 0
+  static PIN_MODE_IN = 1
+  static PIN_MODE_CS = 2
   static US_MASK = 0x1F  //Up to 32 (approx) us delay
   static CMD_UIO_STM_US = 0xC0
   static DELAY_US = CH341.CMD_UIO_STM_US | 1
@@ -110,11 +113,12 @@ export class CH341 {
     })
   }
 
-  async SetPin(pin) {
-    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_DIR | 0x3F,// mask for D0-D5
-    CH341.CMD_UIO_STM_OUT | pin, CH341.CMD_UIO_STM_END]);
+  async WritePin(pin, inout = false) {
+    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_DIR | 0xFF,// mask for D0-D5
+    inout ? CH341.CMD_UIO_STM_IN : CH341.CMD_UIO_STM_OUT | pin, CH341.CMD_UIO_STM_END]);
     await this.device.transferOut(this.endpointOut, command);
   }
+
   /* The status command returns 6 bytes of data. Byte 0 has
    * status for lines 0 to 7, and byte 1 is lines 8 to 15. The
    * 3rd has the status for the SCL/SDA/SCK pins. The 4th byte
@@ -122,14 +126,18 @@ export class CH341 {
    * is unknown.
    */
   async GetPinsStatus() {
+    let res = ""
     const command = new Uint8Array([CH341.PARA_CMD_STS])
     await this.device.transferOut(this.endpointOut, command);
     const request = await this.receiveByte()
     const result = new Uint8Array(request)
-    return (result[0] >>> 0).toString(2);
+    for (let i = 0; i < result.length; i++)
+      res += (result[i] >>> 0).toString(2) + "|"
+    return res;
   }
+
   async receiveByte(byte = 1) {
-    //await this.wait(I2C.I2C_TIMEOUT)
+    await this.wait(CH341.I2C_TIMEOUT)
     const result = await this.device.transferIn(this.endpointIn, byte * 8);
     //console.log(result.data.buffer.byteLength)
     return result.data.buffer
