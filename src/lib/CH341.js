@@ -137,9 +137,8 @@ export class CH341 {
   }
 
   async receiveByte(byte = 1) {
-    await this.wait(CH341.I2C_TIMEOUT)
-    const result = await this.device.transferIn(this.endpointIn, byte * 8);
-    //console.log(result.data.buffer.byteLength)
+    await this.wait(CH341.USB_TIMEOUT)
+    const result = await this.device.transferIn(this.endpointIn, byte);
     return result.data.buffer
   }
 

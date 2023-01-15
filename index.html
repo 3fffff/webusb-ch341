@@ -27,10 +27,11 @@
   document.querySelector("#connect").onclick = async () => {
     const ch341 = new CH341()
     const device = await CH341.requestDevice()
-    await ch341.open(device)
+    /*await ch341.open(device)
     await ch341.WritePin(CH341.SLCT, true)
     const r = await ch341.GetPinsStatus()
-    console.log(r)
+    console.log(r)*/
+    const spi = new SPI()
     const tx = new Uint8Array([
       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
       0x40, 0x00, 0x00, 0x00, 0x00, 0x95,
@@ -39,6 +40,10 @@
       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
       0xDE, 0xAD, 0xBE, 0xEF, 0xBA, 0xAD,
       0xF0, 0x0D]);
+    await spi.open(device)
+    const rr = await spi.SpiStream(0,tx)
+    console.log(rr)
+
     //await spi.startRx((result) => console.log(result))
     // await spi.SpiStream(tx)
     //const r = await spi.ReadStatus()
