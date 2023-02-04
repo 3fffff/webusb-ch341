@@ -20,7 +20,6 @@ export class CH341 {
   static DEV_CONTROL_CFG = 0xC0
   static DEV_CONTROL_BUF_LEN = 8
 
-
   //CH341 pin
   static D0 = 0x01
   static D1 = 0x02
@@ -29,6 +28,7 @@ export class CH341 {
   static D4 = 0x10
   static D5 = 0x20
   static GPIO_NUM_PINS = 16    /* Number of GPIO pins */
+  static ActivePins = 0
 
   static PARA_CMD_STS = 0xA0  /* Get pins status */
   static CMD_UIO_STREAM = 0xAB  /* UIO stream command */
@@ -37,14 +37,12 @@ export class CH341 {
   static CMD_UIO_STM_OUT = 0x80  /* UIO interface OUT command (D0~D5) */
   static CMD_UIO_STM_DIR = 0x40  /* UIO interface DIR command (D0~D5) */
   static CMD_UIO_STM_END = 0x20  /* UIO interface END command */
-  static PIN_MODE_OUT = 0
-  static PIN_MODE_IN = 1
-  static PIN_MODE_CS = 2
   static US_MASK = 0x1F  //Up to 32 (approx) us delay
   static CMD_UIO_STM_US = 0xC0
   static DELAY_US = CH341.CMD_UIO_STM_US | 1
   static DELAY_31US = CH341.CMD_UIO_STM_US | CH341.US_MASK
   static DELAY_10US = CH341.CMD_UIO_STM_US | 10
+
   static async requestDevice(filters) {
     const device = await navigator.usb.requestDevice({
       filters: filters || [
@@ -113,10 +111,16 @@ export class CH341 {
     })
   }
 
-  async WritePin(pin, inout = false) {
-    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_DIR | 0xFF,// mask for D0-D5
-    inout ? CH341.CMD_UIO_STM_IN : CH341.CMD_UIO_STM_OUT | pin, CH341.CMD_UIO_STM_END]);
+  async SetupPin(pin, inout = false, activePin = true) {
+    this.ActivePins = activePin ? this.ActivePins | pin : this.ActivePins & ~(pin)
+    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_DIR | 0x3F,// mask for D0-D5
+    inout ? CH341.CMD_UIO_STM_IN : CH341.CMD_UIO_STM_OUT | this.ActivePins, CH341.CMD_UIO_STM_END]);
     await this.device.transferOut(this.endpointOut, command);
+    console.log(this.ActivePins)
+  }
+
+  async clearPins() {
+    await this.SetupPin(0)
   }
 
   /* The status command returns 6 bytes of data. Byte 0 has
@@ -129,7 +133,7 @@ export class CH341 {
     let res = ""
     const command = new Uint8Array([CH341.PARA_CMD_STS])
     await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveByte()
+    const request = await this.receiveByte(2)
     const result = new Uint8Array(request)
     for (let i = 0; i < result.length; i++)
       res += (result[i] >>> 0).toString(2) + "|"
