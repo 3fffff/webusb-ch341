@@ -42,7 +42,6 @@ export class CH341 {
   static DELAY_US = CH341.CMD_UIO_STM_US | 1
   static DELAY_31US = CH341.CMD_UIO_STM_US | CH341.US_MASK
   static DELAY_10US = CH341.CMD_UIO_STM_US | 10
-
   static async requestDevice(filters) {
     const device = await navigator.usb.requestDevice({
       filters: filters || [
@@ -111,16 +110,15 @@ export class CH341 {
     })
   }
 
-  async SetupPin(pin, inout = false, activePin = true) {
-    this.ActivePins = activePin ? this.ActivePins | pin : this.ActivePins & ~(pin)
+  async SetupPin(pin) {
     const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_DIR | 0x3F,// mask for D0-D5
-    inout ? CH341.CMD_UIO_STM_IN : CH341.CMD_UIO_STM_OUT | this.ActivePins, CH341.CMD_UIO_STM_END]);
+     CH341.CMD_UIO_STM_OUT | pin, CH341.CMD_UIO_STM_END]);
     await this.device.transferOut(this.endpointOut, command);
-    console.log(this.ActivePins)
   }
 
   async clearPins() {
-    await this.SetupPin(0)
+    this.ActivePins = 0
+    await this.SetupPin(0x3F, false)
   }
 
   /* The status command returns 6 bytes of data. Byte 0 has
@@ -133,7 +131,7 @@ export class CH341 {
     let res = ""
     const command = new Uint8Array([CH341.PARA_CMD_STS])
     await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveByte(2)
+    const request = await this.receiveByte(6)
     const result = new Uint8Array(request)
     for (let i = 0; i < result.length; i++)
       res += (result[i] >>> 0).toString(2) + "|"

@@ -23,26 +23,23 @@
   import { I2C } from "./src/lib/I2C.js"
   import { PCA9685 } from "./src/PCA9685.js"
   import { VL531L1X } from "./src/VL531L1X.js"
-
+  import { TB6600 } from "./src/TB6600.js"
+  const ch341 = new CH341()
   document.querySelector("#connect").onclick = async () => {
-    const ch341 = new CH341()
+
     const device = await CH341.requestDevice()
-    /*await ch341.open(device)
-    await ch341.WritePin(CH341.SLCT, true)
+    await ch341.open(device)
+    const tb6600 = new TB6600(ch341)
+    tb6600.MotorMove(5,true)
+    //await ch341.SetupPin(CH341.D0, false)
+    // await ch341.SetupPin(CH341.D0, true)
+    //const r = await ch341.GetPinsStatus()
+    //console.log(r)
+    /*await ch341.SetupPin(CH341.D1, false, false)
+    await ch341.SetupPin(CH341.D2, false, false)
     const r = await ch341.GetPinsStatus()
     console.log(r)*/
-    const spi = new SPI()
-    const tx = new Uint8Array([
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0x40, 0x00, 0x00, 0x00, 0x00, 0x95,
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-      0xDE, 0xAD, 0xBE, 0xEF, 0xBA, 0xAD,
-      0xF0, 0x0D]);
-    await spi.open(device)
-    const rr = await spi.SpiStream(0,tx)
-    console.log(rr)
+
 
     //await spi.startRx((result) => console.log(result))
     // await spi.SpiStream(tx)
@@ -87,11 +84,14 @@
   }
 
   document.querySelector("#disconnect").onclick = async () => {
-    await serial.stop()
+    await ch341.exit()
   }
 
   document.querySelector("#submit").onclick = async () => {
-    await serial.startTx("TEST")
+    // await serial.startTx("TEST")
+    await ch341.wait(50)
+    const r1 = await ch341.GetPinsStatus()
+    console.log(r1)
   }
 </script>
 
