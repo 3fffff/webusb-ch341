@@ -142,13 +142,13 @@ export class I2C extends CH341 {
   }
 
   async Read8Data(reg, reg16bit) {
-    return await ReadData(reg, len = 1, reg16bit)
+    return await this.ReadData(reg,  1, reg16bit)
   }
   async Read16Data(reg, reg16bit) {
-    return await ReadData(reg, len = 2, reg16bit)
+    return await this.ReadData(reg, 2, reg16bit)
   }
   async Read32Data(reg, reg16bit) {
-    return await ReadData(reg, len = 4, reg16bit)
+    return await this.ReadData(reg, 4, reg16bit)
   }
 
   async ReadData(reg, len = 1, reg16bit = false) {
@@ -183,7 +183,7 @@ export class I2C extends CH341 {
     if (!reg16bit)
       await this.WriteByte(reg);
     else {
-      await this.WriteByte(reg >> 8);//MSB
+      await this.WriteByte((reg >> 8) & 0xFF);//MSB
       await this.WriteByte(reg & 0xFF);//LSB
     }
   }

@@ -15,7 +15,7 @@ export class CH341 {
   static MAX_PIN_READ = 7
   static MAX_PIN_WRITE = 5
 
-  static USB_TIMEOUT = 1000
+  static USB_TIMEOUT = 10
 
   static DEV_CONTROL_CFG = 0xC0
   static DEV_CONTROL_BUF_LEN = 8
