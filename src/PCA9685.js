@@ -95,8 +95,7 @@ export class PCA9685 {
   }
 
   async setMotoPulse(channel, pulse) {
-    if (pulse > 4095) await this.setPWM(channel, 0, 4095);
-    else await this.setPWM(channel, 0, pulse);
+    await this.setPWM(channel, 0, pulse > 4095 ? 4095 : pulse);
   }
 
   async setServoAngle(channel, angle) {

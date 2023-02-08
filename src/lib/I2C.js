@@ -23,7 +23,7 @@ export class I2C extends CH341 {
     1000: 3
   }
 
-  static UIO_IN = 0x00
+  static UIO_IN = 0xC0
   static UIO_OUT = 0x80
   static UIO_DIR = 0x40
   static UIO_END = 0x20
@@ -133,38 +133,44 @@ export class I2C extends CH341 {
     return result[0];
   }
 
-  async ReadByte(number) {
-    const command = new Uint8Array([I2C.UIO, I2C.UIO_DIR, I2C.END])
+  async ReadBytes(len = 1) {
+    const command = new Uint8Array([I2C.I2C, I2C.UIO_IN, len * 8, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveByte()
-    const result = new Uint8Array(request)
-    return (result[0] & (1 << number));
+    return await this.receiveByte(len)
   }
 
   async Read8Data(reg, reg16bit) {
-    return await this.ReadData(reg,  1, reg16bit)
+    const request = await this.ReadData(reg, 1, reg16bit)
+    return new Uint8Array(request)[0]
   }
   async Read16Data(reg, reg16bit) {
-    return await this.ReadData(reg, 2, reg16bit)
+    const request = await this.ReadData(reg, 2, reg16bit)
+    return new Uint16Array(request)[0]
   }
   async Read32Data(reg, reg16bit) {
-    return await this.ReadData(reg, 4, reg16bit)
+    const request = await this.ReadData(reg, 4, reg16bit)
+    return new Uint32Array(request)[0]
   }
-
+/*
+Master Reads from a Slave
+1 Send a START
+2 Send I²C address of the SLAVE with the R/W bit low: Addresses the chip. 
+The slave 7-bit address is ‘1101000’., so we will send: 11010000
+3 Send device register you want to read
+4 Send a START sequence again
+5 Send I²C address of the SLAVE with the R/W bit high
+6 Read data byte from SLAVE
+7 Stop bit
+*/
   async ReadData(reg, len = 1, reg16bit = false) {
-    const data = new Uint8Array(len)
     await this.I2CStart();
     await this.WriteByte(this.addr << 1);
     await this.WriteRegAddr(reg, reg16bit)
-    await this.I2CStop();
     await this.I2CStart();
     await this.WriteByte(this.addr << 1 | 1);
-    await this.ReadByteAck();
-
-    for (let i = 0; i < data.length; i++) {
-      data[i] = await this.ReadByte(reg);
-      await this.ReadByteNak();
-    }
+    //await this.ReadByteAck();
+    const data = await this.ReadBytes(len);
+    //await this.ReadByteNak();
     await this.I2CStop();
     return data;
   }
