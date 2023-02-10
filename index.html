@@ -50,13 +50,10 @@
     //const device = await CH341.requestDevice()
     await i2c.open(device)
     let foud_count = 0;
-    for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i) {
-      if (await i2c.I2CDetect(i)) {
-        ++foud_count;
+    for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i)
+      if (await i2c.I2CDetect(i))
         console.log(`Found i2c slave device at address 0x${i.toString(16)}`);
-      }
-    }
-    const addr = 0x40
+    /*const addr = 0x40
     i2c.setAddr(addr)
     const pca = new PCA9685(i2c)
     await pca.setPWMFreq(1000);
@@ -65,14 +62,19 @@
       await pca.analogWrite(0, 0)
       await i2c.wait(30);
     //}
-   /* const vl531l1x = new VL531L1X(i2c)
+    */
+    const vl531l1x = new VL531L1X(i2c)
     i2c.setAddr(0x29)
     const res = await vl531l1x.GetSensorId()
     console.log(res)
-    const  state = await vl531l1x.BootState()
-    console.log(state)
+    while (!(await vl531l1x.BootState())) {
+      await i2c.wait(1000);
+      console.log('Wait for device boot - retry')
+    }
     await vl531l1x.SensorInit()
-    console.log('sensor init')*/
+    console.log('sensor init')
+    const polarity = await vl531l1x.GetInterruptPolarity()
+    console.log(polarity)
     //  console.log(`Scan complete, ${foud_count} found.`);
   }
 

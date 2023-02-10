@@ -81,9 +81,9 @@ export class PCA9685 {
   async setPWM(channel, on, off) {
     console.log(`channel: ${channel}  LED_ON: ${on} LED_OFF: ${off}`);
     await this.dev.Write8Data(PCA9685.LED0_ON_L + 4 * channel, on & 0xFF);
-    await this.dev.Write8Data(PCA9685.LED0_ON_H + 4 * channel, on >> 8);
+    await this.dev.Write8Data(PCA9685.LED0_ON_H + 4 * channel, (on >> 8) & 0xFF);
     await this.dev.Write8Data(PCA9685.LED0_OFF_L + 4 * channel, off & 0xFF);
-    await this.dev.Write8Data(PCA9685.LED0_OFF_H + 4 * channel, off >> 8);
+    await this.dev.Write8Data(PCA9685.LED0_OFF_H + 4 * channel, (off >> 8) & 0xFF);
   }
   async setServoPulse(channel, pulse) {
     pulse = (pulse * 4096 / 20000);  // PWM frequency is 50HZ,the period is 20000us

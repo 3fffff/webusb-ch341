@@ -23,17 +23,11 @@ export class I2C extends CH341 {
     1000: 3
   }
 
-  static UIO_IN = 0xC0
-  static UIO_OUT = 0x80
-  static UIO_DIR = 0x40
-  static UIO_END = 0x20
-
   static MEMW = 0xA6 // aka mCH341_PARA_CMD_W0
   static MEMR = 0xAC // aka mCH341_PARA_CMD_R0
   static SPI = 0xA8
   static SIO = 0xA9
   static I2C = 0xAA
-  static UIO = 0xAB
   static I2C_STATUS = 0x52
   static I2C_COMMAND = 0x53
   static I2C_AddressMin = 0;
@@ -69,20 +63,20 @@ export class I2C extends CH341 {
   async setSpeed(speed) {
     const command = new Uint8Array([I2C.I2C, I2C.SET | I2CSpeed[speed], I2C.END])
     await this.device.transferOut(this.endpointOut, command);
-    const result = await this.receiveByte()
+    const result = await this.receiveByte(I2C.MAX)
     return (result[0] & I2C.OUT) == 0
   }
 
   async WriteByte(bb) {
     const command = new Uint8Array([I2C.I2C, I2C.OUT, bb, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveByte()
+    const request = await this.receiveByte(I2C.MAX)
     const result = new Int8Array(request)
     return (result[0] & I2C.OUT) == 0
   }
 
   async Write8Data(reg, bb, reg16bit = false) {
-    const b = new Uint16Array([bb])
+    const b = new Uint8Array([bb])
     await this.WriteData(reg, b, reg16bit)
   }
   async Write16Data(reg, bb, reg16bit = false) {
@@ -120,7 +114,7 @@ export class I2C extends CH341 {
   async ReadByteAck() {
     const command = new Uint8Array([I2C.I2C, I2C.IN_ACK, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveByte()
+    const request = await this.receiveByte(I2C.MAX)
     const result = new Uint8Array(request)
     return result[0];
   }
@@ -128,15 +122,15 @@ export class I2C extends CH341 {
   async ReadByteNak() {
     const command = new Uint8Array([I2C.I2C, I2C.IN_NAK, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveByte()
+    const request = await this.receiveByte(I2C.MAX)
     const result = new Uint8Array(request)
     return result[0];
   }
 
   async ReadBytes(len = 1) {
-    const command = new Uint8Array([I2C.I2C, I2C.UIO_IN, len * 8, I2C.END])
+    const command = new Uint8Array([I2C.I2C, I2C.IN, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
-    return await this.receiveByte(len)
+    return await this.receiveByte(I2C.MAX)
   }
 
   async Read8Data(reg, reg16bit) {
@@ -151,26 +145,24 @@ export class I2C extends CH341 {
     const request = await this.ReadData(reg, 4, reg16bit)
     return new Uint32Array(request)[0]
   }
-/*
-Master Reads from a Slave
-1 Send a START
-2 Send I²C address of the SLAVE with the R/W bit low: Addresses the chip. 
-The slave 7-bit address is ‘1101000’., so we will send: 11010000
-3 Send device register you want to read
-4 Send a START sequence again
-5 Send I²C address of the SLAVE with the R/W bit high
-6 Read data byte from SLAVE
-7 Stop bit
-*/
+  /*
+  Master Reads from a Slave
+  1 Send a START
+  2 Send I²C address of the SLAVE with the R/W bit low: Addresses the chip. 
+  The slave 7-bit address is ‘1101000’., so we will send: 11010000
+  3 Send device register you want to read
+  4 Send a START sequence again
+  5 Send I²C address of the SLAVE with the R/W bit high
+  6 Read data byte from SLAVE
+  7 Stop bit
+  */
   async ReadData(reg, len = 1, reg16bit = false) {
     await this.I2CStart();
     await this.WriteByte(this.addr << 1);
     await this.WriteRegAddr(reg, reg16bit)
     await this.I2CStart();
-    await this.WriteByte(this.addr << 1 | 1);
-    //await this.ReadByteAck();
-    const data = await this.ReadBytes(len);
-    //await this.ReadByteNak();
+    await this.WriteByte((this.addr << 1) | 1);
+    const data = await this.ReadBytes(I2C.MAX);
     await this.I2CStop();
     return data;
   }

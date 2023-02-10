@@ -319,7 +319,7 @@ export class VL531L1X {
 	}
 
 	async GetSensorId() {
-		return await this.dev.Read8Data(VL531L1X.IDENTIFICATION_MODEL_ID, 1, true)
+		return await this.dev.Read8Data(VL531L1X.IDENTIFICATION_MODEL_ID, true)
 	}
 
 	async GetDistance() {
@@ -352,23 +352,24 @@ export class VL531L1X {
 
 	async GetRangeStatus() {
 		let RgSt = (await this.dev.Read8Data(VL531L1X.RESULT_RANGE_STATUS)) & 0x1F
-		return (RgSt < 24) ? status_rtn[RgSt] : 255
+		return (RgSt < 24) ? this.status_rtn[RgSt] : 255
 	}
 
 	async GetResult() {
-		const Temp = await VL53L1_ReadMulti(VL531L1X.RESULT_RANGE_STATUS, 17);
-		let RgSt = Temp[0] & 0x1F;
+		const Temp = await this.ReadData(VL531L1X.RESULT_RANGE_STATUS, 17);
+		const DVTemp = new DataView(Temp)
+		let RgSt = DVTemp.getUint8(0) & 0x1F;
 
 		if (RgSt < 24) {
-			RgSt = status_rtn[RgSt];
+			RgSt = this.status_rtn[RgSt];
 		}
 
 		return {
 			status: RgSt,
-			ambient: Temp.readUInt16BE(7) * 8,
-			numSPADs: Temp[3],
-			sigPerSPAD: Temp.readUInt16BE(15) * 8,
-			distance: Temp.readUInt16BE(13),
+			ambient: DVTemp.getUint16(7) * 8,
+			numSPADs: DVTemp.getUint8(3),
+			sigPerSPAD: DVTemp.getUint16(15) * 8,
+			distance: DVTemp.getUint16(13),
 		}
 	}
 
@@ -394,7 +395,7 @@ export class VL531L1X {
 	}
 
 	async GetXtalk() {
-		const tmp = await VL53L1_RdDWord(VL531L1X.ALGO_CROSSTALK_COMPENSATION_PLANE_OFFSET_KCPS)
+		const tmp = await this.dev.Read8Data(VL531L1X.ALGO_CROSSTALK_COMPENSATION_PLANE_OFFSET_KCPS)
 		/* * 1000 to convert kcps to cps and >> 9 (7.9 format) */
 		return (tmp * 1000) >> 9
 	}
