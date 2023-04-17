@@ -20,6 +20,9 @@ export class AS5600 {
   static BURN_ANGLE = 0x80
   static BURN_SETTINGS = 0x40
 
+  constructor(dev){
+    this.dev = dev;
+  }
 
   async getBurnCount() {
     return await this.dev.Read8Data(AS5600.REG_ZMCO);
@@ -91,7 +94,7 @@ export class AS5600 {
   }
 
   async getStatus() {
-    value = await this.dev.Read8Data(AS5600.REG_STATUS);
+    const value = await this.dev.Read8Data(AS5600.REG_STATUS);
     console.log((value >> 3));
     const status_bool = new Uint8Array([
       value & (1 << 3), // bit3 is magnet high (too strong)

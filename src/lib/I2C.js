@@ -135,15 +135,15 @@ export class I2C extends CH341 {
 
   async Read8Data(reg, reg16bit) {
     const request = await this.ReadData(reg, 1, reg16bit)
-    return new Uint8Array(request)[0]
+    return new Uint8Array(request)
   }
   async Read16Data(reg, reg16bit) {
     const request = await this.ReadData(reg, 2, reg16bit)
-    return new Uint16Array(request)[0]
+    return new Uint16Array(request)
   }
   async Read32Data(reg, reg16bit) {
     const request = await this.ReadData(reg, 4, reg16bit)
-    return new Uint32Array(request)[0]
+    return new Uint32Array(request)
   }
   /*
   Master Reads from a Slave

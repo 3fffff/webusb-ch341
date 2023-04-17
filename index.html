@@ -24,6 +24,7 @@
   import { PCA9685 } from "./src/PCA9685.js"
   import { VL531L1X } from "./src/VL531L1X.js"
   import { TB6600 } from "./src/TB6600.js"
+  import { AS5600 } from "./src/AS5600.js"
   const ch341 = new CH341()
   document.querySelector("#connect").onclick = async () => {
 
@@ -46,13 +47,19 @@
     //const r = await spi.ReadStatus()
     //console.log(r)
     //const serial = new UART()
+    const AS5600Addr= 0x36
     const i2c = new I2C()
     //const device = await CH341.requestDevice()
     await i2c.open(device)
-    let foud_count = 0;
+    /*let found_count = 0;
     for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i)
       if (await i2c.I2CDetect(i))
-        console.log(`Found i2c slave device at address 0x${i.toString(16)}`);
+        console.log(`Found i2c slave device at address 0x${i.toString(16)}`);*/
+
+    i2c.setAddr(AS5600Addr)
+    const AS5600Y = new AS5600(i2c)
+    const angle = await AS5600Y.getAngle()
+    console.log(angle)
     /*const addr = 0x40
     i2c.setAddr(addr)
     const pca = new PCA9685(i2c)
@@ -63,7 +70,7 @@
       await i2c.wait(30);
     //}
     */
-    const vl531l1x = new VL531L1X(i2c)
+   /* const vl531l1x = new VL531L1X(i2c)
     i2c.setAddr(0x29)
     const res = await vl531l1x.GetSensorId()
     console.log(res)
@@ -74,8 +81,8 @@
     await vl531l1x.SensorInit()
     console.log('sensor init')
     const polarity = await vl531l1x.GetInterruptPolarity()
-    console.log(polarity)
-    //  console.log(`Scan complete, ${foud_count} found.`);
+    console.log(polarity)*/
+    //  console.log(`Scan complete, ${found_count} found.`);
   }
 
   document.querySelector("#disconnect").onclick = async () => {
