@@ -180,10 +180,11 @@ export class I2C extends CH341 {
     for (let i = 0; i < data.length; i++)
       result[i] = await this.WriteByte(data[i]);
     const ACK = await this.ReadByteAck();
-    console.log(ACK)
+    console.log(`read from slave ACK=${ACK}`)
     await this.I2CStop();
     return result;
   }
+  
   async WriteRegAddr(reg, reg16bit) {
     if (!reg16bit)
       await this.WriteByte(reg);
