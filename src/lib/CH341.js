@@ -131,16 +131,16 @@ export class CH341 {
     let res = ""
     const command = new Uint8Array([CH341.PARA_CMD_STS])
     await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveByte(6)
+    const request = await this.receiveBytes(6)
     const result = new Uint8Array(request)
     for (let i = 0; i < result.length; i++)
       res += (result[i] >>> 0).toString(2) + "|"
     return res;
   }
 
-  async receiveByte(byte = 1) {
+  async receiveBytes(bits = 32) {
     await this.wait(CH341.USB_TIMEOUT)
-    const result = await this.device.transferIn(this.endpointIn, byte);
+    const result = await this.device.transferIn(this.endpointIn, bits);
     return result.data.buffer
   }
 

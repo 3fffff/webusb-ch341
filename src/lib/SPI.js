@@ -39,7 +39,7 @@ export class SPI extends CH341 {
         outbuf[j] = this.swapByte(outbuf[j])
       const r = await this.device.transferOut(this.endpointOut, outbuf);
       console.log(r)
-      const res = await this.receiveByte(SPI.PACKET_LENGTH)
+      const res = await this.receiveBytes(SPI.PACKET_LENGTH)
       console.log(res)
     }
     await this.ChipSelect(cs, false);
@@ -51,7 +51,7 @@ export class SPI extends CH341 {
     const command = new Uint8Array([this.swapByte(CH341.CMD_UIO_STREAM), this.swapByte(0x05)]); // Read status
     const result = await this.device.transferOut(this.endpointOut, command);
     console.log(result)
-    const buffer = await this.receiveByte(SPI.PACKET_LENGTH)
+    const buffer = await this.receiveBytes(SPI.PACKET_LENGTH)
     console.log(buffer)
     this.ChipSelect(cs, false)
   }
@@ -61,7 +61,7 @@ export class SPI extends CH341 {
     const commandWrite = new Uint8Array([this.swapByte(CH341.CMD_UIO_STREAM), this.swapByte(0x06)]); // write status
     const result = await this.device.transferOut(this.endpointOut, commandWrite);
     console.log(result)
-    const buffer = await this.receiveByte(2)
+    const buffer = await this.receiveBytes(2)
     console.log(buffer)
     const commandWriteEnd = new Uint8Array([this.swapByte(CH341.CMD_UIO_STREAM), this.swapByte(0x04)]); // write end
     await this.device.transferOut(this.endpointOut, commandWriteEnd);

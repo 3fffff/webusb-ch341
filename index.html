@@ -58,8 +58,12 @@
 
     i2c.setAddr(AS5600Addr)
     const AS5600Y = new AS5600(i2c)
+    const startPos = await AS5600Y.getStatus()
+    console.log(startPos)
     const angle = await AS5600Y.getAngle()
     console.log(angle)
+    const endPos = await AS5600Y.getEndPos()
+    console.log(endPos)
     /*const addr = 0x40
     i2c.setAddr(addr)
     const pca = new PCA9685(i2c)

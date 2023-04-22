@@ -95,13 +95,13 @@ export class AS5600 {
 
   async getStatus() {
     const value = await this.dev.Read8Data(AS5600.REG_STATUS);
-    console.log((value >> 3));
-    const status_bool = new Uint8Array([
+    //console.log(value);
+    const status = new Uint8Array([
       value & (1 << 3), // bit3 is magnet high (too strong)
       value & (1 << 4), // bit4 bit is magnet low (too weak)
       value & (1 << 5)  // bit5 is magnet detected
     ]);
-    return status_bool;
+    return status;
   }
 
   async getAutomaticGainControl() {
