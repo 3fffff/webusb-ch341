@@ -61,8 +61,11 @@
     const ads1115 = new ADS1115(i2c)
     ads1115.setGain(ADS1115.REG_CONFIG_PGA_6_144V)
     await ads1115.configSingle()
-    const data = await ads1115.readData()
-    console.log(data)
+    while(true){
+      const data = await ads1115.readData()
+      console.log(data)
+      await i2c.wait()
+    }
     /*i2c.setAddr(AS5600Addr)
     const AS5600Y = new AS5600(i2c)
     const startPos = await AS5600Y.getStatus()
