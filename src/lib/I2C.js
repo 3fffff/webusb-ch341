@@ -131,8 +131,17 @@ export class I2C extends CH341 {
     if (len == 1) {
       const command = new Uint8Array([I2C.I2C, I2C.IN, I2C.END])
       await this.device.transferOut(this.endpointOut, command);
-    }else{
+    } else if (len < 32) {
       const command = new Uint8Array([I2C.I2C, I2C.IN | (len - 1), I2C.IN, I2C.END])
+      await this.device.transferOut(this.endpointOut, command);
+    } else {
+      const chunks = ~~(len / 32)
+      const rest = len - chunks * 32
+      for (let i = 0; i < chunks - 1; i++) {
+        const command = new Uint8Array([I2C.I2C, I2C.IN | (32 - 1), I2C.IN, I2C.END])
+        await this.device.transferOut(this.endpointOut, command);
+      }
+      const command = new Uint8Array([I2C.I2C, I2C.IN | (rest - 1), I2C.IN, I2C.END])
       await this.device.transferOut(this.endpointOut, command);
     }
     return await this.receiveBytes()
@@ -184,7 +193,7 @@ export class I2C extends CH341 {
     await this.I2CStop();
     return result;
   }
-  
+
   async WriteRegAddr(reg, reg16bit) {
     if (!reg16bit)
       await this.WriteByte(reg);
