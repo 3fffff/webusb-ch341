@@ -137,12 +137,16 @@ export class I2C extends CH341 {
     } else {
       const chunks = ~~(len / 32)
       const rest = len - chunks * 32
+      const res = []
       for (let i = 0; i < chunks - 1; i++) {
         const command = new Uint8Array([I2C.I2C, I2C.IN | (32 - 1), I2C.IN, I2C.END])
-        await this.device.transferOut(this.endpointOut, command);
+        const result = await this.device.transferOut(this.endpointOut, command);
+        res.push(result)
       }
       const command = new Uint8Array([I2C.I2C, I2C.IN | (rest - 1), I2C.IN, I2C.END])
-      await this.device.transferOut(this.endpointOut, command);
+      const result = await this.device.transferOut(this.endpointOut, command);
+      res.push(result)
+      return res
     }
     return await this.receiveBytes()
   }
