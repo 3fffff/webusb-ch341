@@ -26,6 +26,7 @@
   import { TB6600 } from "./src/TB6600.js"
   import { AS5600 } from "./src/AS5600.js"
   import { ADS1115 } from "./src/ADS1115.js"
+  import { ICM20948 } from "./src/ICM20948.js"
   const ch341 = new CH341()
   document.querySelector("#connect").onclick = async () => {
 
@@ -49,7 +50,8 @@
     //console.log(r)
     //const serial = new UART()
     //const AS5600Addr= 0x36
-    const ads1115Addr = 0x48
+    //const ads1115Addr = 0x48
+    const gyro = ICM20948.I2C_ADDR
     const i2c = new I2C()
     //const device = await CH341.requestDevice()
     await i2c.open(device)
@@ -57,15 +59,21 @@
     for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i)
       if (await i2c.I2CDetect(i))
         console.log(`Found i2c slave device at address 0x${i.toString(16)}`);
-    i2c.setAddr(ads1115Addr)
-    const ads1115 = new ADS1115(i2c)
+    i2c.setAddr(gyro)
+    const icm20948 = new ICM20948(i2c)
+    await icm20948.Init()
+    while (true) {
+      await icm20948.read_accelerometer_gyro_data()
+      await i2c.wait(500)
+    }
+    /*const ads1115 = new ADS1115(i2c)
     ads1115.setGain(ADS1115.REG_CONFIG_PGA_6_144V)
     await ads1115.configSingle()
     while(true){
       const data = await ads1115.readData()
       console.log(data)
       await i2c.wait()
-    }
+    }*/
     /*i2c.setAddr(AS5600Addr)
     const AS5600Y = new AS5600(i2c)
     const startPos = await AS5600Y.getStatus()

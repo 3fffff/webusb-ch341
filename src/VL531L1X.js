@@ -305,11 +305,11 @@ export class VL531L1X {
 
 	async SetInterMeasurementInMs(InterMeasMs) {
 		const ClockPLL = (await this.dev.Read16Data(VL531L1X.RESULT_OSC_CALIBRATE_VAL)) & 0x3FF
-		return VL53L1_WrDWord(VL531L1X.SYSTEM_INTERMEASUREMENT_PERIOD, ClockPLL * InterMeasMs * 1.075);
+		return await this.dev.Write16Data(VL531L1X.SYSTEM_INTERMEASUREMENT_PERIOD, ClockPLL * InterMeasMs * 1.075);
 	}
 
 	async GetInterMeasurementInMs() {
-		const pIM = await VL53L1_RdDWord(VL531L1X.SYSTEM_INTERMEASUREMENT_PERIOD)
+		const pIM = await this.dev.Read16Data(VL531L1X.SYSTEM_INTERMEASUREMENT_PERIOD)
 		const ClockPLL = (await this.dev.Read16Data(VL531L1X.RESULT_OSC_CALIBRATE_VAL)) & 0x3FF
 		return pIM / (ClockPLL * 1.075) // ST code had 1.065?
 	}

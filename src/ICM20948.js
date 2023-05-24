@@ -203,12 +203,12 @@ export class ICM20948 {
         await this.setAccelerometerLowPass(true, 5)
         await this.setAccelerometerFullScale(16)
 
-       /* await this.bank(0)
-        await this.dev.Write8Data(ICM20948.INT_PIN_CFG, 0x30)
-
-        await this.bank(3)
-        await this.dev.Write8Data(ICM20948.I2C_MST_CTRL, 0x4D)
-        await this.dev.Write8Data(ICM20948.I2C_MST_DELAY_CTRL, 0x01)*/
+        /* await this.bank(0)
+         await this.dev.Write8Data(ICM20948.INT_PIN_CFG, 0x30)
+ 
+         await this.bank(3)
+         await this.dev.Write8Data(ICM20948.I2C_MST_CTRL, 0x4D)
+         await this.dev.Write8Data(ICM20948.I2C_MST_DELAY_CTRL, 0x01)*/
 
         /*if (!await this.magRead(ICM20948.AK09916_WIA) == ICM20948.AK09916_CHIP_ID)
             new Error("Unable to find AK09916")
@@ -222,7 +222,7 @@ export class ICM20948 {
         await this.bank(0)
         const data = await this.dev.ReadData(ICM20948.ACCEL_XOUT_H, 12)
         console.log(data)
-        /*let [ax, ay, az, gx, gy, gz] = data
+        let [ax, ay, az, gx, gy, gz] = new Int16Array(data)
 
         await this.bank(2)
 
@@ -231,24 +231,24 @@ export class ICM20948 {
         let scale = (await this.dev.Read8Data(ICM20948.ACCEL_CONFIG) & 0x06) >> 1
 
         // scale ranges from section 3.2 of the datasheet
-        const gs = [16384.0, 8192.0, 4096.0, 2048.0].map(v => v * scale)
+        const gs = [16384.0, 8192.0, 4096.0, 2048.0]//.map(v => v * scale)
 
-        ax /= gs
-        ay /= gs
-        az /= gs
+        ax /= gs[scale]
+        ay /= gs[scale]
+        az /= gs[scale]
 
         // Read back the degrees per second rate and
         // use it to compensate the this.reading to dps
         scale = (await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1) & 0x06) >> 1
 
         // scale ranges from section 3.1 of the datasheet
-        const dps = [131, 65.5, 32.8, 16.4].map(v => v * scale)
+        const dps = [131, 65.5, 32.8, 16.4]//.map(v => v * scale)
 
-        gx /= dps
-        gy /= dps
-        gz /= dps
+        gx /= dps[scale]
+        gy /= dps[scale]
+        gz /= dps[scale]
 
-        return [ax, ay, az, gx, gy, gz]*/
+        return [ax, ay, az, gx, gy, gz]
     }
 
     async triggerMagIO() {
