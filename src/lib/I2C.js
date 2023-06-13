@@ -13,6 +13,8 @@ export class I2C extends CH341 {
   static US = 0x40 // vendor code uses a few of these in 20khz mode?
   static MS = 0x50
   static DLY = 0x0f
+  static UIO = 0xAB
+  static UIO_DIR = 0x40
   static END = 0x00 // Finish commands with this. is this really necessary?
 
   //I2C speed
@@ -151,6 +153,13 @@ export class I2C extends CH341 {
     return await this.receiveBytes()
   }
 
+  async ReadPin(number) {
+    const command = new Uint8Array([I2C.UIO, I2C.UIO_DIR, I2C.END])
+    await this.device.transferOut(this.endpointOut, command);
+    const result = await this.receiveBytes()
+    return (result[0] & (1 << number));
+  }
+
   async Read8Data(reg, reg16bit) {
     const request = await this.ReadData(reg, 1, reg16bit)
     return new Uint8Array(request)[0]
@@ -181,6 +190,7 @@ export class I2C extends CH341 {
     await this.I2CStart();
     await this.WriteByte((this.addr << 1) | 1);
     const data = await this.ReadBytes(len);
+    //const data = this.ReadPin(reg);
     await this.I2CStop();
     return data;
   }
@@ -190,10 +200,11 @@ export class I2C extends CH341 {
     await this.I2CStart();
     await this.WriteByte(this.addr << 1);
     await this.WriteRegAddr(reg, reg16bit)
-    for (let i = 0; i < data.length; i++)
+    for (let i = 0; i < data.length; i++) {
       result[i] = await this.WriteByte(data[i]);
-    const ACK = await this.ReadByteAck();
-    console.log(`read from slave ACK=${ACK}`)
+      //const ACK = await this.ReadByteAck();
+      //console.log(`read from slave ACK=${ACK}`)
+    }
     await this.I2CStop();
     return result;
   }
