@@ -13,13 +13,11 @@ export class SPI extends CH341 {
   static MAX_PACKETS = 256
   static MAX_PACKET_LEN = (SPI.PACKET_LENGTH * SPI.MAX_PACKETS)
 
-  swapByte(byte) {
-    let orig = byte;
+  swapByte(bytes) {
     let swap = 0;
     for (let i = 0; i < 8; ++i) {
-      swap = swap << 1;
-      swap |= (orig & 1);
-      orig = orig >> 1;
+      const bit = (bytes >> i) & 1;
+      swap |= (bit << (8 - i))
     }
     return swap;
   }
