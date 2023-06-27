@@ -5,14 +5,14 @@ export class I2C extends CH341 {
   static STA = 0x74
   static STO = 0x75
   static OUT = 0x80
-  static IN = 0xc0
+  static IN = 0xC0
   static IN_ACK = I2C.IN | 1
   static IN_NAK = I2C.IN | 0
   static MAX = 32 // min (0x3f, 32) ?! (wrong place for this)
   static SET = 0x60 // bit 7 apparently SPI bit order, bit 2 spi single vs spi double
   static US = 0x40 // vendor code uses a few of these in 20khz mode?
   static MS = 0x50
-  static DLY = 0x0f
+  static DLY = 0x0F
   static UIO = 0xAB
   static UIO_DIR = 0x40
   static END = 0x00 // Finish commands with this. is this really necessary?
@@ -113,16 +113,8 @@ export class I2C extends CH341 {
    * 8 - 0xFF    See datasheet for exact meaning
    */
 
-  async ReadByteAck() {
-    const command = new Uint8Array([I2C.I2C, I2C.IN_ACK, I2C.END])
-    await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveBytes()
-    const result = new Uint8Array(request)
-    return result[0];
-  }
-
-  async ReadByteNak() {
-    const command = new Uint8Array([I2C.I2C, I2C.IN_NAK, I2C.END])
+  async ReadByteAck(Nak = false) {
+    const command = new Uint8Array([I2C.I2C, !Nak ? I2C.IN_ACK : I2C.IN_NAK, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
     const request = await this.receiveBytes()
     const result = new Uint8Array(request)
@@ -190,7 +182,6 @@ export class I2C extends CH341 {
     await this.I2CStart();
     await this.WriteByte((this.addr << 1) | 1);
     const data = await this.ReadBytes(len);
-    //const data = this.ReadPin(reg);
     await this.I2CStop();
     return data;
   }
