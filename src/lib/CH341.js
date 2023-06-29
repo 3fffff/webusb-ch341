@@ -15,6 +15,11 @@ export class CH341 {
   static MAX_PIN_READ = 7
   static MAX_PIN_WRITE = 5
 
+  static CMD_SPI_STREAM = 0xA8
+  static CMD_SIO_STREAM = 0xA9
+  static CMD_I2C_STREAM = 0xAA
+  static CMD_UIO_STREAM = 0xAB
+  static STM_SPI_DBL = 0x04
   static USB_TIMEOUT = 10
 
   static DEV_CONTROL_CFG = 0xC0
@@ -31,7 +36,6 @@ export class CH341 {
   static ActivePins = 0
 
   static PARA_CMD_STS = 0xA0  /* Get pins status */
-  static CMD_UIO_STREAM = 0xAB  /* UIO stream command */
 
   static CMD_UIO_STM_IN = 0x00  /* UIO interface IN command (D0~D7) */
   static CMD_UIO_STM_OUT = 0x80  /* UIO interface OUT command (D0~D5) */
@@ -136,6 +140,13 @@ export class CH341 {
     for (let i = 0; i < result.length; i++)
       res += (result[i] >>> 0).toString(2) + "|"
     return res;
+  }
+
+  async ReadPin(number) {
+    const command = new Uint8Array([I2C.UIO, I2C.UIO_DIR, I2C.END])
+    await this.device.transferOut(this.endpointOut, command);
+    const result = await this.receiveBytes()
+    return (result[0] & (1 << number));
   }
 
   async receiveBytes(bits = 32) {

@@ -105,7 +105,7 @@ export class UART extends CH341 {
     ];
   }
 
-  async startTx(str) {
+  async sendCommandTx(str) {
     const data = new TextEncoder('utf-8').encode(str);
     const result = await this.device.transferOut(this.endpointOut, data);
     console.log(result)
@@ -121,14 +121,6 @@ export class UART extends CH341 {
     }
     console.log('stopRx');
     await this.RxRequest(UART.REG_MODEM_OUT, UART.REG_MODEM_VALUE_OFF);
-  }
-
-  async stopTx() {
-  }
-
-  async stop() {
-    await this.stopRx();
-    await this.stopTx();
   }
 
   async initUART(baudRate) {
