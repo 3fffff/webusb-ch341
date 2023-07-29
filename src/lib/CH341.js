@@ -36,6 +36,13 @@ export class CH341 {
   static ActivePins = 0
 
   static PARA_CMD_STS = 0xA0  /* Get pins status */
+  static CMD_I2C_STM_END = 0x00
+
+  static CMD_I2C_STM_STA = 0x74
+  static CMD_I2C_STM_STO = 0x75
+  static CMD_I2C_STM_OUT = 0x80
+  static CMD_I2C_STM_IN = 0xC0
+  static CMD_I2C_STM_SET = 0x60
 
   static CMD_UIO_STM_IN = 0x00  /* UIO interface IN command (D0~D7) */
   static CMD_UIO_STM_OUT = 0x80  /* UIO interface OUT command (D0~D5) */
@@ -116,7 +123,7 @@ export class CH341 {
 
   async SetupPin(pin) {
     const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_DIR | 0x3F,// mask for D0-D5
-     CH341.CMD_UIO_STM_OUT | pin, CH341.CMD_UIO_STM_END]);
+    CH341.CMD_UIO_STM_OUT | pin, CH341.CMD_UIO_STM_END]);
     await this.device.transferOut(this.endpointOut, command);
   }
 
