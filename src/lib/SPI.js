@@ -49,9 +49,9 @@ export class SPI extends CH341 {
     return result
   }
 
-  async ReadStatus(cs) {
+  async ReadByte(cs,byte) {
     await this.ChipSelect(cs, true)
-    const command = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(0x05)]); // Read status
+    const command = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(byte)]); // Read status
     const result = await this.device.transferOut(this.endpointOut, command);
     console.log(result)
     const buffer = await this.receiveBytes(SPI.PACKET_LENGTH)
@@ -59,9 +59,9 @@ export class SPI extends CH341 {
     this.ChipSelect(cs, false)
   }
 
-  async WriteStatus(cs) {
+  async WriteByte(cs,byte) {
     await this.ChipSelect(cs, true)
-    const commandWrite = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(0x06)]); // write status
+    const commandWrite = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(byte)]); // write status
     const result = await this.device.transferOut(this.endpointOut, commandWrite);
     console.log(result)
     const buffer = await this.receiveBytes(2)
