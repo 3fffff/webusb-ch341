@@ -53,7 +53,7 @@ export class UART extends CH341 {
   }
 
   async TxRequest(request, mode, interface_ = 0) {
-    console.log('transferRequest', mode);
+    console.log('txRequest', mode);
     const result = await this.device.controlTransferOut({
       requestType: "vendor",
       recipient: "device",
@@ -61,20 +61,19 @@ export class UART extends CH341 {
       value: mode,
       index: interface_
     })
-    if (result.status !== 'ok') throw 'failed to setTransceiverMode';
+    if (result.status !== 'ok') throw 'failed to setTxMode';
   }
 
   async RxRequest(request, mode, interface_ = 0) {
-    console.log('transferRequest', mode);
-    let data = new DataView(new ArrayBuffer(UART.BUFFER_SIZE))
+    console.log('rxRequest', mode);
     const result = await this.device.controlTransferIn({
       requestType: "vendor",
       recipient: "device",
       request: request,
       value: mode,
       index: interface_
-    }, data)
-    if (result.status !== 'ok') throw 'failed to setTransceiverMode';
+    }, UART.BUFFER_SIZE)
+    if (result.status !== 'ok') throw 'failed to setRxMode';
     return result
   }
 
@@ -89,10 +88,7 @@ export class UART extends CH341 {
         callback(new Uint8Array(result.data.buffer));
       }
     }
-    this.rxRunning = [
-      new Promise(resolve => transfer(resolve)),
-      new Promise(resolve => transfer(resolve))
-    ];
+    this.rxRunning = new Promise(resolve => transfer(resolve))
   }
 
   async sendCommandTx(str) {
