@@ -39,7 +39,6 @@ export class UART extends CH341 {
   static CONTROL_DTR = 0x20
   static CONTROL_RTS = 0x40
 
-
   static UART_STATE = 0x00
   static UART_OVERRUN_ERROR = 0x01
   static UART_PARITY_ERROR = 0x02
@@ -53,21 +52,19 @@ export class UART extends CH341 {
     await this.TxRequest(UART.REQUEST_WRITE_REGISTRY, UART.REG_CONTROL_STATUS);
   }
 
-  async TxRequest(request, mode, interface_) {
+  async TxRequest(request, mode, interface_ = 0) {
     console.log('transferRequest', mode);
     const result = await this.device.controlTransferOut({
       requestType: "vendor",
       recipient: "device",
       request: request,
       value: mode,
-      index: interface_ ? interface_ : 0
+      index: interface_
     })
-    if (result.status !== 'ok') {
-      throw 'failed to setTransceiverMode';
-    }
+    if (result.status !== 'ok') throw 'failed to setTransceiverMode';
   }
 
-  async RxRequest(request, mode, interface_) {
+  async RxRequest(request, mode, interface_ = 0) {
     console.log('transferRequest', mode);
     let data = new DataView(new ArrayBuffer(UART.BUFFER_SIZE))
     const result = await this.device.controlTransferIn({
@@ -75,11 +72,9 @@ export class UART extends CH341 {
       recipient: "device",
       request: request,
       value: mode,
-      index: interface_ ? interface_ : 0
+      index: interface_
     }, data)
-    if (result.status !== 'ok') {
-      throw 'failed to setTransceiverMode';
-    }
+    if (result.status !== 'ok') throw 'failed to setTransceiverMode';
     return result
   }
 
@@ -87,15 +82,10 @@ export class UART extends CH341 {
     if (this.rxRunning) throw "already started";
     const transfer = async (resolve) => {
       const result = await this.device.transferIn(this.endpointIn, UART.BUFFER_SIZE);
-      if (this.rxRunning) {
-        transfer(resolve);
-      } else {
-        resolve();
-      }
+      if (this.rxRunning) transfer(resolve);
+      else resolve();
       if (result) {
-        if (result.status !== 'ok') {
-          throw 'failed to get transfer';
-        }
+        if (result.status !== 'ok') throw 'failed to get transfer';
         callback(new Uint8Array(result.data.buffer));
       }
     }
