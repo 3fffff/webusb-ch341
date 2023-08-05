@@ -4,7 +4,7 @@ export class SPI extends CH341 {
   static PACKET_LENGTH = 0x20
   static MAX_PACKETS = 256
   static MAX_PACKET_LEN = (SPI.PACKET_LENGTH * SPI.MAX_PACKETS)
-
+  static lsb = true
   swapBytes(bytes) {
     const swap = new Uint8Array(bytes.length)
     for (let i = 0; i < bytes.length; i++)
@@ -36,22 +36,23 @@ export class SPI extends CH341 {
   async SpiStream(cs, data) {
     const result = new Uint8Array(data.length)
     await this.ChipSelect(cs, true);
-    for (let i = 0; i < Math.ceil(data.length / (SPI.PACKET_LENGTH - 1)); i += (SPI.PACKET_LENGTH - 1)) {
-      const swappedData = this.swapBytes(data.subarray(i, i + SPI.PACKET_LENGTH - 1))
+    for (let i = 0; i < Math.ceil(data.length / (SPI.PACKET_LENGTH - 1)); i++) {
+      const ipack = i * SPI.PACKET_LENGTH - 1
+      const swappedData = SPI.lsb ? this.swapBytes(data.subarray(ipack, ipack + SPI.PACKET_LENGTH - 1)) : data.subarray(ipack, ipack + SPI.PACKET_LENGTH - 1)
       const outbuf = new Uint8Array([CH341.CMD_SPI_STREAM, ...swappedData])
       const r = await this.device.transferOut(this.endpointOut, outbuf);
       console.log(r)
-      const res = await this.receiveBytes(SPI.PACKET_LENGTH)
+      const res = await this.receiveBytes(SPI.PACKET_LENGTH - 1)
       console.log(res)
-      for (let j = 0; j < SPI.PACKET_LENGTH; j++)result[SPI.PACKET_LENGTH * i + j] = this.swapByte(res[j])
+      for (let j = 0; j < SPI.PACKET_LENGTH; j++)result[SPI.PACKET_LENGTH * i + j] = SPI.lsb ? this.swapByte(res[j]) : res[j]
     }
     await this.ChipSelect(cs, false);
     return result
   }
 
-  async ReadByte(cs,byte) {
+  async ReadByte(cs, byte) {
     await this.ChipSelect(cs, true)
-    const command = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(byte)]); // Read status
+    const command = new Uint8Array([CH341.CMD_SPI_STREAM, SPI.lsb ? this.swapByte(byte) : byte]); // Read status
     const result = await this.device.transferOut(this.endpointOut, command);
     console.log(result)
     const buffer = await this.receiveBytes(SPI.PACKET_LENGTH)
@@ -59,14 +60,14 @@ export class SPI extends CH341 {
     this.ChipSelect(cs, false)
   }
 
-  async WriteByte(cs,byte) {
+  async WriteByte(cs, byte) {
     await this.ChipSelect(cs, true)
-    const commandWrite = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(byte)]); // write status
+    const commandWrite = new Uint8Array([CH341.CMD_SPI_STREAM, SPI.lsb ? this.swapByte(byte) : byte]); // write status
     const result = await this.device.transferOut(this.endpointOut, commandWrite);
     console.log(result)
     const buffer = await this.receiveBytes(2)
     console.log(buffer)
-    const commandWriteEnd = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(0x04)]); // write end
+    const commandWriteEnd = new Uint8Array([CH341.CMD_SPI_STREAM, SPI.lsb ? this.swapByte(byte) : byte]); // write end
     await this.device.transferOut(this.endpointOut, commandWriteEnd);
     this.ChipSelect(cs, false)
   }
