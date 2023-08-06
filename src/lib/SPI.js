@@ -29,22 +29,23 @@ export class SPI extends CH341 {
 
   async ChipSelect(cs, enable) {
     const csio = [0x36, 0x35, 0x33, 0x27];
-    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_OUT | enable ? csio[cs] : 0x37, CH341.CMD_UIO_STM_DIR | 0x3F, CH341.CMD_UIO_STM_END])
+    const command = new Uint8Array(enable ? [CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_OUT | csio[cs], CH341.CMD_UIO_STM_DIR | 0x3F, CH341.CMD_UIO_STM_END] : [CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_OUT | 0x37, CH341.CMD_UIO_STM_END])
     await this.device.transferOut(this.endpointOut, command);
   }
 
   async SpiStream(cs, data) {
     const result = new Uint8Array(data.length)
+    const packets = Math.ceil(data.length / (SPI.PACKET_LENGTH - 1))
     await this.ChipSelect(cs, true);
-    for (let i = 0; i < Math.ceil(data.length / (SPI.PACKET_LENGTH - 1)); i++) {
+    for (let i = 0; i < packets; i++) {
       const ipack = i * SPI.PACKET_LENGTH - 1
-      const swappedData = SPI.lsb ? this.swapBytes(data.subarray(ipack, ipack + SPI.PACKET_LENGTH - 1)) : data.subarray(ipack, ipack + SPI.PACKET_LENGTH - 1)
+      const swappedData = this.swapBytes(data.subarray(ipack, ipack + SPI.PACKET_LENGTH - 1))
       const outbuf = new Uint8Array([CH341.CMD_SPI_STREAM, ...swappedData])
       const r = await this.device.transferOut(this.endpointOut, outbuf);
       console.log(r)
-      const res = await this.receiveBytes(SPI.PACKET_LENGTH - 1)
+      const res = await this.receiveBytes(i == packets - 1 ? data.length - i * (SPI.PACKET_LENGTH - 1) : SPI.PACKET_LENGTH - 1)
       console.log(res)
-      for (let j = 0; j < SPI.PACKET_LENGTH; j++)result[SPI.PACKET_LENGTH * i + j] = SPI.lsb ? this.swapByte(res[j]) : res[j]
+      for (let j = 0; j < SPI.PACKET_LENGTH; j++)result[SPI.PACKET_LENGTH * i + j] = this.swapByte(res[j])
     }
     await this.ChipSelect(cs, false);
     return result
@@ -52,22 +53,22 @@ export class SPI extends CH341 {
 
   async ReadByte(cs, byte) {
     await this.ChipSelect(cs, true)
-    const command = new Uint8Array([CH341.CMD_SPI_STREAM, SPI.lsb ? this.swapByte(byte) : byte]); // Read status
+    const command = new Uint8Array([CH341.CMD_SPI_STREAM, 0x0]); // Read status
     const result = await this.device.transferOut(this.endpointOut, command);
     console.log(result)
-    const buffer = await this.receiveBytes(SPI.PACKET_LENGTH)
+    const buffer = await this.receiveBytes()
     console.log(buffer)
     this.ChipSelect(cs, false)
   }
 
   async WriteByte(cs, byte) {
     await this.ChipSelect(cs, true)
-    const commandWrite = new Uint8Array([CH341.CMD_SPI_STREAM, SPI.lsb ? this.swapByte(byte) : byte]); // write status
+    const commandWrite = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(byte)]); // write status
     const result = await this.device.transferOut(this.endpointOut, commandWrite);
     console.log(result)
-    const buffer = await this.receiveBytes(2)
+    const buffer = await this.receiveBytes()
     console.log(buffer)
-    const commandWriteEnd = new Uint8Array([CH341.CMD_SPI_STREAM, SPI.lsb ? this.swapByte(byte) : byte]); // write end
+    const commandWriteEnd = new Uint8Array([CH341.CMD_SPI_STREAM, this.swapByte(byte)]); // write end
     await this.device.transferOut(this.endpointOut, commandWriteEnd);
     this.ChipSelect(cs, false)
   }
