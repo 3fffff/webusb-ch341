@@ -2,7 +2,7 @@ export class ICM20948 {
     static CHIP_ID = 0xEA
     static I2C_ADDR = 0x68
     static I2C_ADDR_ALT = 0x69
-    static BANK_SEL = 0x7f
+    static BANK_SEL = 0x7F
 
     static I2C_MST_ODR_CONFIG = 0x00
     static I2C_MST_CTRL = 0x01
