@@ -21,7 +21,7 @@ export class SPI extends CH341 {
     return swap;
   }
 
-  async setSpeed(dspeed) {
+  async setSpeed(dspeed = false) {
     const command = dspeed ? new Uint8Array([CH341.CMD_I2C_STREAM, CH341.CMD_I2C_STM_SET, CH341.STM_SPI_DBL, CH341.CMD_I2C_STM_END]) :
       new Uint8Array([CH341.CMD_I2C_STREAM, CH341.CMD_I2C_STM_SET, CH341.CMD_I2C_STM_END]);
     await this.device.transferOut(this.endpointOut, command);
@@ -37,14 +37,15 @@ export class SPI extends CH341 {
     const result = new Uint8Array(data.length)
     const packets = Math.ceil(data.length / (SPI.PACKET_LENGTH - 1))
     await this.ChipSelect(cs, true);
+    const sendStream = new Uint8Array([CH341.CMD_SPI_STREAM])
+    await this.device.transferOut(this.endpointOut, sendStream);
+    await this.receiveBytes()
     for (let i = 0; i < packets; i++) {
-      const ipack = i * SPI.PACKET_LENGTH - 1
-      const swappedData = this.swapBytes(data.subarray(ipack, ipack + SPI.PACKET_LENGTH - 1))
-      const outbuf = new Uint8Array([CH341.CMD_SPI_STREAM, ...swappedData])
-      const transData = await this.device.transferOut(this.endpointOut, outbuf);
-      console.log(transData)
-      const res = await this.receiveBytes(i == packets - 1 ? data.length - i * (SPI.PACKET_LENGTH - 1) : SPI.PACKET_LENGTH - 1)
-      console.log(res)
+      const swappedData = this.swapBytes(data.subarray(i * SPI.PACKET_LENGTH, i * SPI.PACKET_LENGTH + SPI.PACKET_LENGTH))
+      const outbuf = new Uint8Array([...swappedData])
+      await this.device.transferOut(this.endpointOut, outbuf);
+      const result = await this.receiveBytes(SPI.PACKET_LENGTH)
+      console.log(result)
       for (let j = 0; j < SPI.PACKET_LENGTH; j++)result[SPI.PACKET_LENGTH * i + j] = this.swapByte(res[j])
     }
     await this.ChipSelect(cs, false);
@@ -53,7 +54,7 @@ export class SPI extends CH341 {
 
   async ReadByte(cs, byte) {
     await this.ChipSelect(cs, true)
-    const command = new Uint8Array([CH341.CMD_SPI_STREAM, byte]); // Read status
+    const command = new Uint8Array([CH341.CMD_SPI_STREAM, byte, 0x00, 0x00, 0x00, 0x00, 0x00]); // Read status
     const result = await this.device.transferOut(this.endpointOut, command);
     console.log(result)
     const buffer = await this.receiveBytes()

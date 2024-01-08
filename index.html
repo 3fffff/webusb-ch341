@@ -53,8 +53,8 @@
     //const ads1115Addr = 0x48
     const spi = new SPI()
     await spi.open(device)
-    await spi.setSpeed(false)
-    await spi.ReadByte(0x36, ICM20948.WHO_AM_I)
+    await spi.setSpeed()
+    await spi.ReadByte(0x36, 0xEA)
     /* const gyro = ICM20948.I2C_ADDR
      const i2c = new I2C()
      //const device = await CH341.requestDevice()
