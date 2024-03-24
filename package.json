@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/3fffff/webusb-ch341#readme",
   "dependencies": {
-    "parcel": "^2.8.2"
+    "parcel": "^2.12.0"
   }
 }
