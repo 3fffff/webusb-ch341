@@ -16,6 +16,7 @@ export class I2C extends CH341 {
   static UIO = 0xAB
   static UIO_DIR = 0x40
   static END = 0x00 // Finish commands with this. is this really necessary?
+  static MAX_CHUNK = 32
 
   //I2C speed
   static I2CSpeed = {
@@ -125,21 +126,25 @@ export class I2C extends CH341 {
     if (len == 1) {
       const command = new Uint8Array([I2C.I2C, I2C.IN, I2C.END])
       await this.device.transferOut(this.endpointOut, command);
-    } else if (len < 32) {
+    } else if (len < I2C.MAX_CHUNK) {
       const command = new Uint8Array([I2C.I2C, I2C.IN | (len - 1), I2C.IN, I2C.END])
       await this.device.transferOut(this.endpointOut, command);
     } else {
-      const chunks = ~~(len / 32)
-      const rest = len - chunks * 32
+      const chunks = ~~(len / I2C.MAX_CHUNK)
+      const rest = len - chunks * I2C.MAX_CHUNK
       const res = []
-      for (let i = 0; i < chunks - 1; i++) {
-        const command = new Uint8Array([I2C.I2C, I2C.IN | (32 - 1), I2C.IN, I2C.END])
-        const result = await this.device.transferOut(this.endpointOut, command);
+      for (let i = 0; i < chunks; i++) {
+        const command = new Uint8Array([I2C.I2C, I2C.IN | (I2C.MAX_CHUNK - 1), I2C.IN, I2C.END])
+        await this.device.transferOut(this.endpointOut, command);
+        const result = await this.receiveBytes()
         res.push(result)
       }
-      const command = new Uint8Array([I2C.I2C, I2C.IN | (rest - 1), I2C.IN, I2C.END])
-      const result = await this.device.transferOut(this.endpointOut, command);
-      res.push(result)
+      if (rest != 0) {
+        const command = new Uint8Array([I2C.I2C, I2C.IN | (rest - 1), I2C.IN, I2C.END])
+        await this.device.transferOut(this.endpointOut, command);
+        const result = await this.receiveBytes()
+        res.push(result)
+      }
       return res
     }
     return await this.receiveBytes()

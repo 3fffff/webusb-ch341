@@ -35,7 +35,8 @@ export class SPI extends CH341 {
 
   async SpiStream(cs, data) {
     const result = new Uint8Array(data.length)
-    const packets = Math.ceil(data.length / (SPI.PACKET_LENGTH - 1))
+    const packets = ~~(len / SPI.MAX_PACKETS)
+    const rest = len - packets * SPI.MAX_PACKETS
     await this.ChipSelect(cs, true);
     const sendStream = new Uint8Array([CH341.CMD_SPI_STREAM])
     await this.device.transferOut(this.endpointOut, sendStream);
@@ -46,6 +47,13 @@ export class SPI extends CH341 {
       await this.device.transferOut(this.endpointOut, outbuf);
       const result = await this.receiveBytes(SPI.PACKET_LENGTH)
       console.log(result)
+      for (let j = 0; j < SPI.PACKET_LENGTH; j++)result[SPI.PACKET_LENGTH * i + j] = this.swapByte(res[j])
+    }
+    if (rest != 0) {
+      const swappedData = this.swapBytes(data.subarray(packets * SPI.PACKET_LENGTH, packets * SPI.PACKET_LENGTH + SPI.PACKET_LENGTH))
+      const outbuf = new Uint8Array([...swappedData])
+      await this.device.transferOut(this.endpointOut, outbuf);
+      const result = await this.receiveBytes(SPI.PACKET_LENGTH)
       for (let j = 0; j < SPI.PACKET_LENGTH; j++)result[SPI.PACKET_LENGTH * i + j] = this.swapByte(res[j])
     }
     await this.ChipSelect(cs, false);
