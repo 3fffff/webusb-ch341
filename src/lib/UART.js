@@ -103,7 +103,7 @@ export class UART extends CH341 {
       const promises = this.rxRunning;
       console.log(promises);
       this.rxRunning = null;
-      await Promise.all(promises);
+      await Promise.all([promises]);
     }
     console.log('stopRx');
     await this.RxRequest(UART.REG_MODEM_OUT, UART.REG_MODEM_VALUE_OFF);
