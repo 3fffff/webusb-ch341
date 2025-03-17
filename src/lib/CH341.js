@@ -121,13 +121,13 @@ export class CH341 {
     })
   }
 
-  async SetupPin(pin,direction,output){
-    const command = new Uint8Array([CH341.CMD_SET_OUTPUT,0x6A,pin & 0x1F,output >> 8 & 0xEF,direction >> 8 & 0xEF | 0x10,output & 0xFF,direction & 0xFF,output >> 16 & 0x0F,0,0,0])
+  async setupPin(pin, direction, output) {
+    const command = new Uint8Array([CH341.CMD_SET_OUTPUT, 0x6A, pin & 0x1F, output >> 8 & 0xEF, direction >> 8 & 0xEF | 0x10, output & 0xFF, direction & 0xFF, output >> 16 & 0x0F, 0, 0, 0])
     await this.device.transferOut(this.endpointOut, command);
   }
-  
-//Set direction and output data of D5-D0 on CH341 
-  async SetupPins(direction,output,pin) {
+
+  //Set direction and output data of D5-D0 on CH341 
+  async setupPins(direction, output, pin) {
     const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_OUT | output & 0x3F,// mask for D0-D5
     CH341.CMD_UIO_STM_DIR | direction & 0x3F, CH341.CMD_UIO_STM_END]);
     await this.device.transferOut(this.endpointOut, command);
@@ -135,7 +135,7 @@ export class CH341 {
 
   async clearPins() {
     this.ActivePins = 0
-    await this.SetupPin(0x3F, false)
+    await this.setupPin(0x3F, false)
   }
 
   /* The status command returns 6 bytes of data. Byte 0 has
@@ -144,7 +144,7 @@ export class CH341 {
    * might have some remaining pin status. Byte 5 and 6 content
    * is unknown.
    */
-  async GetPinsStatus() {
+  async getPinsStatus() {
     let res = ""
     const command = new Uint8Array([CH341.PARA_CMD_STS])
     await this.device.transferOut(this.endpointOut, command);
@@ -155,7 +155,7 @@ export class CH341 {
     return res;
   }
 
-  async ReadPin(number) {
+  async readPin(number) {
     const command = new Uint8Array([I2C.UIO, I2C.UIO_DIR, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
     const result = await this.receiveBytes()

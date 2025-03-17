@@ -80,9 +80,9 @@ export class ADS1115 {
   async readData() {
     let data = await this.dev.Read16Data(ADS1115.REG_POINTER_CONVERT)
     //uint16 to int16
-    if(data>32767)
-        data-=65535
-    da*=this.coefficient
+    if (data > 32767)
+      data -= 65535
+    da *= this.coefficient
     return data
   }
 }

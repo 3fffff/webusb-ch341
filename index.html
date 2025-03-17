@@ -32,13 +32,13 @@
 
     const device = await CH341.requestDevice()
     /*await ch341.open(device)
-    //await ch341.SetupPin(CH341.D0, false)
-    // await ch341.SetupPin(CH341.D0, true)
-    //const r = await ch341.GetPinsStatus()
+    //await ch341.setupPin(CH341.D0, false)
+    // await ch341.setupPin(CH341.D0, true)
+    //const r = await ch341.getPinsStatus()
     //console.log(r)
-    /*await ch341.SetupPin(CH341.D1, false, false)
-    await ch341.SetupPin(CH341.D2, false, false)
-    const r = await ch341.GetPinsStatus()
+    /*await ch341.setupPin(CH341.D1, false, false)
+    await ch341.setupPin(CH341.D2, false, false)
+    const r = await ch341.getPinsStatus()
     console.log(r)*/
 
 
@@ -49,21 +49,22 @@
     //const serial = new UART()
     //const AS5600Addr= 0x36
     //const ads1115Addr = 0x48
-    /*const spi = new SPI()
+    const spi = new SPI()
     await spi.open(device)
     await spi.setSpeed()
-    await spi.ReadByte(0x36, 0xEA)*/
+    const result = await spi.spiStream(0, new Uint8Array([0xEA]))
+    console.log(result)
     //const gyro = ICM20948.I2C_ADDR
-    const i2c = new I2C()
+    //const i2c = new I2C()
     //const device = await CH341.requestDevice()
-    await i2c.open(device)
+    //await i2c.open(device)
     /*let found_count = 0;
     for (let i = I2C.I2C_AddressMin; i <= I2C.I2C_AddressMax; ++i)
       if (await i2c.I2CDetect(i))
         console.log(`Found i2c slave device at address 0x${i.toString(16)}`);*/
-    i2c.setAddr(0x50);
-    const data = await i2c.ReadData(0x0, 512);
-    console.log(data)
+   // i2c.setAddr(0x50);
+   // const data = await i2c.ReadData(0x0, 512);
+   // console.log(data)
     /*  i2c.setAddr(gyro)
       const icm20948 = new ICM20948(i2c)
       await icm20948.Init()
@@ -119,7 +120,7 @@
   document.querySelector("#submit").onclick = async () => {
     // await serial.startTx("TEST")
     await ch341.wait(50)
-    const r1 = await ch341.GetPinsStatus()
+    const r1 = await ch341.getPinsStatus()
     console.log(r1)
   }
 </script>
