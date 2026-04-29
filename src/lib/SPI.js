@@ -34,31 +34,32 @@ export class SPI extends CH341 {
   }
 
   async spiStream(cs, data, swap = false) {
-    const result = []
-    const packets = ~~(data.length / SPI.MAX_PACKETS)
-    const rest = data.length - packets * SPI.MAX_PACKETS
+    const result = [];
+    const packets = Math.floor(data.length / SPI.PACKET_LENGTH);
+    const rest = data.length % SPI.PACKET_LENGTH;  // Cleaner than subtraction
+
     await this.#chipSelect(cs, true);
+
     for (let i = 0; i < packets; i++) {
-      if (swap) {
-        const swappedData = this.swapBytes(chunk)
-        await this.device.transferOut(this.endpointOut, new Uint8Array([CH341.CMD_SPI_STREAM, ...swappedData]));
-      } else
-        await this.device.transferOut(this.endpointOut, new Uint8Array([CH341.CMD_SPI_STREAM, ...chunk]));
-      const res = await this.receiveBytes(SPI.PACKET_LENGTH)
-      result.push(...new Uint8Array(res))
+      const start = i * SPI.PACKET_LENGTH;
+      const chunk = data.subarray(start, start + SPI.PACKET_LENGTH);
+      const payload = swap ? this.swapBytes(chunk) : chunk;
+      await this.device.transferOut(this.endpointOut, new Uint8Array([CH341.CMD_SPI_STREAM, ...payload]));
+      const res = await this.receiveBytes(SPI.PACKET_LENGTH);
+      result.push(...new Uint8Array(res));
     }
-    if (rest != 0) {
-      const chunk = data.subarray(packets * SPI.PACKET_LENGTH, rest)
-      if (swap) {
-        const swappedData = this.swapBytes(chunk)
-        await this.device.transferOut(this.endpointOut, new Uint8Array([CH341.CMD_SPI_STREAM, ...swappedData]));
-      } else
-        await this.device.transferOut(this.endpointOut, new Uint8Array([CH341.CMD_SPI_STREAM, ...chunk]));
-      const res = await this.receiveBytes(rest)
-      result.push(...new Uint8Array(res))
+
+    if (rest > 0) {
+      const start = packets * SPI.PACKET_LENGTH;
+      const chunk = data.subarray(start, start + rest);  // Fixed end index
+      const payload = swap ? this.swapBytes(chunk) : chunk;
+      await this.device.transferOut(this.endpointOut, new Uint8Array([CH341.CMD_SPI_STREAM, ...payload]));
+      const res = await this.receiveBytes(rest);
+      result.push(...new Uint8Array(res));
     }
+
     await this.#chipSelect(cs, false);
-    return result
+    return result;
   }
 
   async readByte(cs, byte) {
