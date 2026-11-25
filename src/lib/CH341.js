@@ -43,6 +43,7 @@ export class CH341 {
   static CMD_I2C_STM_OUT = 0x80
   static CMD_I2C_STM_IN = 0xC0
   static CMD_I2C_STM_SET = 0x60
+  static CMD_SET_OUTPUT = 0xA1
 
   static CMD_UIO_STM_IN = 0x00  /* UIO interface IN command (D0~D7) */
   static CMD_UIO_STM_OUT = 0x80  /* UIO interface OUT command (D0~D5) */
@@ -122,20 +123,20 @@ export class CH341 {
   }
 
   async setupPin(pin, direction, output) {
-    const command = new Uint8Array([CH341.CMD_SET_OUTPUT, 0x6A, pin & 0x1F, output >> 8 & 0xEF, direction >> 8 & 0xEF | 0x10, output & 0xFF, direction & 0xFF, output >> 16 & 0x0F, 0, 0, 0])
+    const command = new Uint8Array([CH341.CMD_SET_OUTPUT, 0x6A, pin & 0x1F, output >> 8 & 0xEF, ((direction >> 8) & 0xEF) | 0x10, output & 0xFF, direction & 0xFF, (output >> 16) & 0x0F, 0, 0, 0])
     await this.device.transferOut(this.endpointOut, command);
   }
 
   //Set direction and output data of D5-D0 on CH341 
   async setupPins(direction, output, pin) {
-    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_OUT | output & 0x3F,// mask for D0-D5
-    CH341.CMD_UIO_STM_DIR | direction & 0x3F, CH341.CMD_UIO_STM_END]);
+    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_OUT | (output & 0x3F),// mask for D0-D5
+    CH341.CMD_UIO_STM_DIR | (direction & 0x3F), CH341.CMD_UIO_STM_END]);
     await this.device.transferOut(this.endpointOut, command);
   }
 
   async clearPins() {
     this.ActivePins = 0
-    await this.setupPin(0x3F, false)
+    await this.setupPins(0x3F, 0x00)
   }
 
   /* The status command returns 6 bytes of data. Byte 0 has
@@ -156,9 +157,10 @@ export class CH341 {
   }
 
   async readPin(number) {
-    const command = new Uint8Array([I2C.UIO, I2C.UIO_DIR, I2C.END])
+    const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_IN, CH341.CMD_UIO_STM_END])
     await this.device.transferOut(this.endpointOut, command);
-    const result = await this.receiveBytes()
+    const request = await this.receiveBytes()
+    const result = new Uint8Array(request)
     return (result[0] & (1 << number));
   }
 
@@ -169,7 +171,6 @@ export class CH341 {
   }
 
   async exit() {
-    console.log('exit');
     await this.device.close();
   }
 

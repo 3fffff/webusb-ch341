@@ -1,7 +1,7 @@
 import { CH341 } from "./CH341.js"
 
 export class SPI extends CH341 {
-  static PACKET_LENGTH = 0x20
+  static PACKET_LENGTH = 0x1F
   static MAX_PACKETS = 256
   static MAX_PACKET_LEN = (SPI.PACKET_LENGTH * SPI.MAX_PACKETS)
   static lsb = true
@@ -9,7 +9,7 @@ export class SPI extends CH341 {
     const swap = new Uint8Array(bytes.length)
     for (let i = 0; i < bytes.length; i++)
       swap[i] = this.swapByte(bytes[i])
-    return bytes
+    return swap
   }
 
   swapByte(byte) {
@@ -22,8 +22,12 @@ export class SPI extends CH341 {
   }
 
   async setSpeed(dspeed = false) {
-    const command = dspeed ? new Uint8Array([CH341.CMD_I2C_STREAM, CH341.CMD_I2C_STM_SET, CH341.STM_SPI_DBL, CH341.CMD_I2C_STM_END]) :
-      new Uint8Array([CH341.CMD_I2C_STREAM, CH341.CMD_I2C_STM_SET, CH341.CMD_I2C_STM_END]);
+    const mode = CH341.CMD_I2C_STM_SET | (dspeed ? CH341.STM_SPI_DBL : 0);
+    const command = new Uint8Array([
+      CH341.CMD_I2C_STREAM,
+      mode,
+      CH341.CMD_I2C_STM_END
+    ]);
     await this.device.transferOut(this.endpointOut, command);
   }
 
