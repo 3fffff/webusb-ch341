@@ -24,10 +24,15 @@ export class UART extends CH341 {
     9600: { "FACTOR": 0xB282, "OFFSET": 0x08 },
     14400: { "FACTOR": 0xd980, "OFFSET": 0xEB },
     19200: { "FACTOR": 0xD982, "OFFSET": 0x07 },
-    38400: { "FACTOR": 0x6483, "OFFSET": null },
-    57600: { "FACTOR": 0x9883, "OFFSET": null },
-    115200: { "FACTOR": 0xCC83, "OFFSET": null },
-    230500: { "FACTOR": 0xE683, "OFFSET": null },
+    38400: { "FACTOR": 0x6483, "OFFSET": 0x03 },
+    57600: { "FACTOR": 0x9883, "OFFSET": 0x03 },
+    115200: { "FACTOR": 0xCC83, "OFFSET": 0x03 },
+    230400: { "FACTOR": 0xE683, "OFFSET": 0x03 },
+    460800: { "FACTOR": 0xF383, "OFFSET": 0x03 },
+    921600: { "FACTOR": 0xF387, "OFFSET": 0x03 },
+    1000000: { "FACTOR": 0xF487, "OFFSET": 0x03 },
+    1500000: { "FACTOR": 0xF887, "OFFSET": 0x03 },
+    2000000: { "FACTOR": 0xFA87, "OFFSET": 0x03 }
   }
 
   //for CMD 0xA4
@@ -78,17 +83,24 @@ export class UART extends CH341 {
   }
 
   async startRx(callback) {
-    if (this.rxRunning) throw "already started";
-    const transfer = async (resolve) => {
-      const result = await this.device.transferIn(this.endpointIn, UART.BUFFER_SIZE);
-      if (this.rxRunning) transfer(resolve);
-      else resolve();
-      if (result) {
-        if (result.status !== 'ok') throw 'failed to get transfer';
-        callback(new Uint8Array(result.data.buffer));
+    if (this.rxRunning) throw new Error("already started");
+    this.isRxActive = true;
+
+    this.rxRunning = (async () => {
+      try {
+        while (this.isRxActive && this.device?.opened) {
+          const result = await this.device.transferIn(this.endpointIn, UART.BUFFER_SIZE);
+          if (result?.status === 'ok' && result.data?.byteLength > 0) {
+            const chunk = new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
+            callback(chunk);
+          }
+        }
+      } catch (err) {
+        if (this.isRxActive) console.error('UART RX error:', err);
+      } finally {
+        this.isRxActive = false;
       }
-    }
-    this.rxRunning = new Promise(resolve => transfer(resolve))
+    })();
   }
 
   async sendCommandTx(str) {
@@ -98,15 +110,12 @@ export class UART extends CH341 {
   }
 
   async stopRx() {
-    if (this.rxRunning) {
-      console.log('stopRx waiting');
-      const promises = this.rxRunning;
-      console.log(promises);
-      this.rxRunning = null;
-      await Promise.all([promises]);
+    const runningPromise = this.rxRunning;
+    this.rxRunning = null;
+    if (runningPromise) {
+      await runningPromise;
     }
-    console.log('stopRx');
-    await this.RxRequest(UART.REG_MODEM_OUT, UART.REG_MODEM_VALUE_OFF);
+    await this.TxRequest(UART.REG_MODEM_OUT, UART.REG_MODEM_VALUE_OFF);
   }
 
   async initUART(baudRate) {

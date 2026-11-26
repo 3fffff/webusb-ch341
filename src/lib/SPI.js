@@ -57,8 +57,9 @@ export class SPI extends CH341 {
       const start = packets * SPI.PACKET_LENGTH;
       const chunk = data.subarray(start, start + rest);  // Fixed end index
       const payload = swap ? this.swapBytes(chunk) : chunk;
-      await this.device.transferOut(this.endpointOut, new Uint8Array([CH341.CMD_SPI_STREAM, ...payload]));
-      const res = await this.receiveBytes(rest);
+      const stream = new Uint8Array([CH341.CMD_SPI_STREAM, ...payload])
+      await this.device.transferOut(this.endpointOut, stream);
+      const res = await this.receiveBytes(SPI.PACKET_LENGTH);
       result.push(...new Uint8Array(res));
     }
 
@@ -74,5 +75,14 @@ export class SPI extends CH341 {
     const buffer = await this.receiveBytes()
     console.log(buffer)
     this.#chipSelect(cs, false)
+  }
+
+  async Write8Data(reg, value) {
+    await this.spiStream(this.cs, new Uint8Array([reg & 0x7F, value]), true);
+  }
+  
+  async Read8Data(reg) {
+    const res = await this.spiStream(this.cs, [reg | 0x80, 0x00], true);
+    return res; 
   }
 }

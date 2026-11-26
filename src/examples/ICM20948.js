@@ -63,8 +63,7 @@ export class ICM20948 {
     constructor(dev) {
         this.dev = dev;
     }
-
-
+    
     async bank(value) {
         //Switch register this.bank.
         if (!this._bank == value) {
@@ -203,12 +202,16 @@ export class ICM20948 {
         await this.setAccelerometerLowPass(true, 5)
         await this.setAccelerometerFullScale(16)
 
-        /* await this.bank(0)
+         await this.bank(0)
          await this.dev.Write8Data(ICM20948.INT_PIN_CFG, 0x30)
  
          await this.bank(3)
          await this.dev.Write8Data(ICM20948.I2C_MST_CTRL, 0x4D)
-         await this.dev.Write8Data(ICM20948.I2C_MST_DELAY_CTRL, 0x01)*/
+         await this.dev.Write8Data(ICM20948.I2C_MST_DELAY_CTRL, 0x01)
+        this.accelScale = (await this.dev.Read8Data(ICM20948.ACCEL_CONFIG) & 0x06) >> 1
+        // Read back the degrees per second rate and
+        // use it to compensate the this.reading to dps
+        this.gyroScale = (await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1) & 0x06) >> 1
 
         /*if (!await this.magRead(ICM20948.AK09916_WIA) == ICM20948.AK09916_CHIP_ID)
             new Error("Unable to find AK09916")
@@ -218,36 +221,35 @@ export class ICM20948 {
         while (!await this.magRead(ICM20948.AK09916_CNTL3) == 0x01)
             await this.dev.wait(10)*/
     }
-    async read_accelerometer_gyro_data() {
+    async readAccelerometerGyroData() {
         await this.bank(0)
         const data = await this.dev.ReadData(ICM20948.ACCEL_XOUT_H, 12)
-        console.log(data)
-        let [ax, ay, az, gx, gy, gz] = new Int16Array(data)
+        const view = new DataView(data);
+        let ax = view.getInt16(0, false);
+        let ay = view.getInt16(2, false);
+        let az = view.getInt16(4, false);
+        let gx = view.getInt16(6, false);
+        let gy = view.getInt16(8, false);
+        let gz = view.getInt16(10, false);
 
         await this.bank(2)
 
         //Read accelerometer full scale range and
         // use it to compensate the this.reading to gs
-        let scale = (await this.dev.Read8Data(ICM20948.ACCEL_CONFIG) & 0x06) >> 1
 
         // scale ranges from section 3.2 of the datasheet
         const gs = [16384.0, 8192.0, 4096.0, 2048.0]//.map(v => v * scale)
 
-        ax /= gs[scale]
-        ay /= gs[scale]
-        az /= gs[scale]
-
-        // Read back the degrees per second rate and
-        // use it to compensate the this.reading to dps
-        scale = (await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1) & 0x06) >> 1
+        ax /= gs[this.accelScale]
+        ay /= gs[this.accelScale]
+        az /= gs[this.accelScale]
 
         // scale ranges from section 3.1 of the datasheet
         const dps = [131, 65.5, 32.8, 16.4]//.map(v => v * scale)
 
-        gx /= dps[scale]
-        gy /= dps[scale]
-        gz /= dps[scale]
-
+        gx /= dps[this.gyroScale]
+        gy /= dps[this.gyroScale]
+        gz /= dps[this.gyroScale]
         return [ax, ay, az, gx, gy, gz]
     }
 

@@ -120,6 +120,9 @@ export class CH341 {
         }
       })
     })
+    //reset previous transactions on endpoints
+    await this.device.clearHalt('out', this.endpointOut).catch(() => { });
+    await this.device.clearHalt('in', this.endpointIn).catch(() => { });
   }
 
   async setupPin(pin, direction, output) {

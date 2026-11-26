@@ -17,13 +17,14 @@ export class I2C extends CH341 {
   static UIO_DIR = 0x40
   static END = 0x00 // Finish commands with this. is this really necessary?
   static MAX_CHUNK = 32
+  static MAX_WRITE_CHUNK = 29
 
   //I2C speed
   static I2CSpeed = {
-    100: 0,
-    400: 1,
-    750: 2,
-    1000: 3
+    20: 0,
+    100: 1,
+    400: 2,
+    750: 3
   }
 
   static MEMW = 0xA6 // aka mCH341_PARA_CMD_W0
@@ -52,29 +53,25 @@ export class I2C extends CH341 {
   async I2CStart() {
     const command = new Uint8Array([I2C.I2C, I2C.STA, I2C.END])
     const result = await this.device.transferOut(this.endpointOut, command);
-    await this.wait(I2C.I2C_TIMEOUT)
     return result
   }
 
   async I2CStop() {
     const command = new Uint8Array([I2C.I2C, I2C.STO, I2C.END])
     const result = await this.device.transferOut(this.endpointOut, command);
-    await this.wait(I2C.I2C_TIMEOUT)
     return result
   }
 
   async setSpeed(speed) {
-    const command = new Uint8Array([I2C.I2C, I2C.SET | I2CSpeed[speed], I2C.END])
+    const command = new Uint8Array([I2C.I2C, I2C.SET | I2C.I2CSpeed[speed], I2C.END])
     await this.device.transferOut(this.endpointOut, command);
-    const result = await this.receiveBytes()
-    return (result[0] & I2C.OUT) == 0
   }
 
   async WriteByte(bb) {
     const command = new Uint8Array([I2C.I2C, I2C.OUT, bb, I2C.END])
     await this.device.transferOut(this.endpointOut, command);
     const request = await this.receiveBytes()
-    const result = new Int8Array(request)
+    const result = new Uint8Array(request)
     return (result[0] & I2C.OUT) == 0
   }
 
@@ -132,20 +129,23 @@ export class I2C extends CH341 {
     } else {
       const chunks = ~~(len / I2C.MAX_CHUNK)
       const rest = len - chunks * I2C.MAX_CHUNK
-      const res = []
+      const output = []
       for (let i = 0; i < chunks; i++) {
-        const command = new Uint8Array([I2C.I2C, I2C.IN | (I2C.MAX_CHUNK - 1), I2C.IN, I2C.END])
+        const isLast = (i === chunks - 1) && (rest === 0)
+        const command = new Uint8Array([I2C.I2C, I2C.IN | (I2C.MAX_CHUNK - 1), isLast ? I2C.IN : I2C.IN_ACK, I2C.END])
         await this.device.transferOut(this.endpointOut, command);
         const result = await this.receiveBytes()
-        res.push(result)
+        output.push(result)
       }
       if (rest != 0) {
-        const command = new Uint8Array([I2C.I2C, I2C.IN | (rest - 1), I2C.IN, I2C.END])
+        const command = rest == 1
+          ? new Uint8Array([I2C.I2C, I2C.IN, I2C.END])
+          : new Uint8Array([I2C.I2C, I2C.IN | (rest - 1), I2C.IN, I2C.END])
         await this.device.transferOut(this.endpointOut, command);
         const result = await this.receiveBytes()
-        res.push(result)
+        output.push(result)
       }
-      return res
+      return output
     }
     return await this.receiveBytes()
   }
@@ -174,14 +174,47 @@ export class I2C extends CH341 {
   7 Stop bit
   */
   async ReadData(reg, len = 1, reg16bit = false) {
-    await this.I2CStart();
-    await this.WriteByte(this.addr << 1);
-    await this.WriteRegAddr(reg, reg16bit)
-    await this.I2CStart();
-    await this.WriteByte((this.addr << 1) | 1);
-    const data = await this.ReadBytes(len);
-    await this.I2CStop();
-    return data;
+    if (len <= 32) {
+      const readCmd = len === 1
+        ? [I2C.IN]
+        : [I2C.IN | (len - 1), I2C.IN];
+
+      const command = reg16bit
+        ? new Uint8Array([
+          I2C.I2C, I2C.STA,
+          I2C.OUT, this.addr << 1,
+          I2C.OUT, (reg >> 8) & 0xFF,
+          I2C.OUT, reg & 0xFF,
+          I2C.STA,
+          I2C.OUT, (this.addr << 1) | 1,
+          ...readCmd,
+          I2C.STO, I2C.END
+        ])
+        : new Uint8Array([
+          I2C.I2C, I2C.STA,
+          I2C.OUT, this.addr << 1,
+          I2C.OUT, reg,
+          I2C.STA,
+          I2C.OUT, (this.addr << 1) | 1,
+          ...readCmd,
+          I2C.STO, I2C.END
+        ]);
+
+      await this.device.transferOut(this.endpointOut, command);
+      const buffer = await this.receiveBytes();
+      // first 3 (or 4 for 16-bit register) bytes is ACK  I2C.OUT,
+      const ackCount = reg16bit ? 4 : 3;
+      return buffer.slice(ackCount, ackCount + len);
+    } else {
+      await this.I2CStart();
+      await this.WriteByte(this.addr << 1);
+      await this.WriteRegAddr(reg, reg16bit)
+      await this.I2CStart();
+      await this.WriteByte((this.addr << 1) | 1);
+      const data = await this.ReadBytes(len);
+      await this.I2CStop();
+      return data;
+    }
   }
 
   async WriteData(reg, data, reg16bit = false) {
@@ -189,7 +222,16 @@ export class I2C extends CH341 {
     await this.I2CStart();
     await this.WriteByte(this.addr << 1);
     await this.WriteRegAddr(reg, reg16bit)
-    for (let i = 0; i < data.length; i++)result[i] = await this.WriteByte(data[i]);
+    //for (let i = 0; i < data.length; i++)result[i] = await this.WriteByte(data[i]);
+    for (let offset = 0; offset < data.length; offset += I2C.MAX_WRITE_CHUNK) {
+      const chunk = data.subarray(offset, offset + I2C.MAX_WRITE_CHUNK);
+      const command = new Uint8Array(chunk.length + 3);
+      command[0] = I2C.I2C;
+      command[1] = I2C.OUT | chunk.length;
+      command.set(chunk, 2);
+      command[command.length - 1] = I2C.END;
+      await this.device.transferOut(this.endpointOut, command);
+    }
     await this.I2CStop();
     return result;
   }
