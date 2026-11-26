@@ -63,16 +63,16 @@
       if (await i2c.I2CDetect(i))
         console.log(`Found i2c slave device at address 0x${i.toString(16)}`);
 
-    i2c.setAddr(0x76);
-    const id00 = await i2c.Read8Data(0x00);
-    console.log('Reg 0x00:', '0x' + id00.toString(16));
+  //  i2c.setAddr(0x76);
+  //  const id00 = await i2c.Read8Data(0x00);
+   // console.log('Reg 0x00:', '0x' + id00.toString(16));
 
-    const promC1 = await i2c.Read16Data(0xA2);
-    console.log('PROM C1 (0xA2):', promC1);
+  //  const promC1 = await i2c.Read16Data(0xA2);
+  //  console.log('PROM C1 (0xA2):', promC1);
     // i2c.setAddr(0x50);
     // const data = await i2c.ReadData(0x0, 512);
     // console.log(data)
-    /*   i2c.setAddr(gyro)
+       i2c.setAddr(gyro)
        await i2c.setSpeed(750)
        const icm20948 = new ICM20948(i2c)
        await icm20948.Init()
@@ -83,7 +83,7 @@
          console.log(elapsed)
          console.log(data)
          // await i2c.wait(5)
-       }*/
+       }
     /*const ads1115 = new ADS1115(i2c)
     ads1115.setGain(ADS1115.REG_CONFIG_PGA_6_144V)
     await ads1115.configSingle()

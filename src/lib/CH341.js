@@ -168,7 +168,6 @@ export class CH341 {
   }
 
   async receiveBytes(bits = 32) {
-    await this.wait(CH341.USB_TIMEOUT)
     const result = await this.device.transferIn(this.endpointIn, bits);
     return result.data.buffer
   }
