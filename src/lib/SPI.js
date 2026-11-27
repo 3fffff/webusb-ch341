@@ -16,7 +16,7 @@ export class SPI extends CH341 {
     let swap = 0;
     for (let i = 0; i < 8; ++i) {
       const bit = (byte >> i) & 1;
-      swap |= (bit << (8 - i))
+      swap |= (bit << (7 - i))
     }
     return swap;
   }

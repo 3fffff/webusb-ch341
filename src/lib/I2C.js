@@ -120,34 +120,23 @@ export class I2C extends CH341 {
   }
 
   async ReadBytes(len = 1) {
-    if (len == 1) {
-      const command = new Uint8Array([I2C.I2C, I2C.IN, I2C.END])
+    const output = [];
+    for (let offset = 0; offset < len; offset += I2C.MAX_CHUNK) {
+      const chunkLen = Math.min(len - offset, I2C.MAX_CHUNK);
+      const isLast = (offset + chunkLen) >= len;
+      const lastCmd = isLast ? I2C.IN : I2C.IN_ACK;
+
+      const readCmd = chunkLen === 1
+        ? [lastCmd]
+        : [I2C.IN | (chunkLen - 1), lastCmd];
+
+      const command = new Uint8Array([I2C.I2C, ...readCmd, I2C.END]);
       await this.device.transferOut(this.endpointOut, command);
-    } else if (len < I2C.MAX_CHUNK) {
-      const command = new Uint8Array([I2C.I2C, I2C.IN | (len - 1), I2C.IN, I2C.END])
-      await this.device.transferOut(this.endpointOut, command);
-    } else {
-      const chunks = ~~(len / I2C.MAX_CHUNK)
-      const rest = len - chunks * I2C.MAX_CHUNK
-      const output = []
-      for (let i = 0; i < chunks; i++) {
-        const isLast = (i === chunks - 1) && (rest === 0)
-        const command = new Uint8Array([I2C.I2C, I2C.IN | (I2C.MAX_CHUNK - 1), isLast ? I2C.IN : I2C.IN_ACK, I2C.END])
-        await this.device.transferOut(this.endpointOut, command);
-        const result = await this.receiveBytes()
-        output.push(result)
-      }
-      if (rest != 0) {
-        const command = rest == 1
-          ? new Uint8Array([I2C.I2C, I2C.IN, I2C.END])
-          : new Uint8Array([I2C.I2C, I2C.IN | (rest - 1), I2C.IN, I2C.END])
-        await this.device.transferOut(this.endpointOut, command);
-        const result = await this.receiveBytes()
-        output.push(result)
-      }
-      return output
+
+      const result = await this.receiveBytes(chunkLen);
+      output.push(...new Uint8Array(result));
     }
-    return await this.receiveBytes()
+    return output;
   }
 
   async Read8Data(reg, reg16bit) {
@@ -173,67 +162,80 @@ export class I2C extends CH341 {
   6 Read data byte from SLAVE
   7 Stop bit
   */
-  async ReadData(reg, len = 1, reg16bit = false) {
-    if (len <= 32) {
-      const readCmd = len === 1
-        ? [I2C.IN]
-        : [I2C.IN | (len - 1), I2C.IN];
+  async ReadData(reg, len = 1, reg16bit = false, autoIncReg = true) {
+    const ackCount = reg16bit ? 4 : 3;
+    const maxPayload = I2C.MAX_CHUNK - ackCount;
+    const output = new Uint8Array(len);
 
-      const command = reg16bit
-        ? new Uint8Array([
+    let offset = 0;
+    let currentReg = reg;
+
+    while (offset < len) {
+      const chunkLen = Math.min(len - offset, maxPayload);
+      const readCmd = chunkLen === 1
+        ? [I2C.IN]
+        : [I2C.IN | (chunkLen - 1), I2C.IN];
+
+      const header = reg16bit
+        ? [
           I2C.I2C, I2C.STA,
           I2C.OUT, this.addr << 1,
-          I2C.OUT, (reg >> 8) & 0xFF,
-          I2C.OUT, reg & 0xFF,
+          I2C.OUT, (currentReg >> 8) & 0xFF,
+          I2C.OUT, currentReg & 0xFF,
           I2C.STA,
-          I2C.OUT, (this.addr << 1) | 1,
-          ...readCmd,
-          I2C.STO, I2C.END
-        ])
-        : new Uint8Array([
+          I2C.OUT, (this.addr << 1) | 1
+        ]
+        : [
           I2C.I2C, I2C.STA,
           I2C.OUT, this.addr << 1,
-          I2C.OUT, reg,
+          I2C.OUT, currentReg & 0xFF,
           I2C.STA,
-          I2C.OUT, (this.addr << 1) | 1,
-          ...readCmd,
-          I2C.STO, I2C.END
-        ]);
+          I2C.OUT, (this.addr << 1) | 1
+        ];
+
+      const command = new Uint8Array([...header, ...readCmd, I2C.STO, I2C.END]);
 
       await this.device.transferOut(this.endpointOut, command);
-      const buffer = await this.receiveBytes();
-      // first 3 (or 4 for 16-bit register) bytes is ACK  I2C.OUT,
-      const ackCount = reg16bit ? 4 : 3;
-      return buffer.slice(ackCount, ackCount + len);
-    } else {
-      await this.I2CStart();
-      await this.WriteByte(this.addr << 1);
-      await this.WriteRegAddr(reg, reg16bit)
-      await this.I2CStart();
-      await this.WriteByte((this.addr << 1) | 1);
-      const data = await this.ReadBytes(len);
-      await this.I2CStop();
-      return data;
+      const buffer = await this.receiveBytes(ackCount + chunkLen);
+
+      output.set(new Uint8Array(buffer, ackCount, chunkLen), offset);
+
+      offset += chunkLen;
+      if (autoIncReg) currentReg += chunkLen;
     }
+
+    return output.buffer;
   }
 
-  async WriteData(reg, data, reg16bit = false) {
-    const result = new Uint8Array(data.length)
-    await this.I2CStart();
-    await this.WriteByte(this.addr << 1);
-    await this.WriteRegAddr(reg, reg16bit)
-    //for (let i = 0; i < data.length; i++)result[i] = await this.WriteByte(data[i]);
-    for (let offset = 0; offset < data.length; offset += I2C.MAX_WRITE_CHUNK) {
-      const chunk = data.subarray(offset, offset + I2C.MAX_WRITE_CHUNK);
-      const command = new Uint8Array(chunk.length + 3);
-      command[0] = I2C.I2C;
-      command[1] = I2C.OUT | chunk.length;
-      command.set(chunk, 2);
-      command[command.length - 1] = I2C.END;
+  async WriteData(reg, data, reg16bit = false, autoIncReg = false) {
+    const addrBytes = reg16bit
+      ? [this.addr << 1, (reg >> 8) & 0xFF, reg & 0xFF]
+      : [this.addr << 1, reg & 0xFF];
+
+    // (32 - 5 service byte [I2C, STA, OUT|N, STO, END] = 27 bytes for address + data)
+    const maxSinglePayload = 27 - addrBytes.length; // 25 bytes for 8-bits reg, 24 bytes for 16-bits reg
+    for (let offset = 0; offset < data.length; offset += maxSinglePayload) {
+      const chunk = data.subarray(offset, offset + maxSinglePayload);
+      const totalLen = addrBytes.length + chunk.length;
+      const command = new Uint8Array([
+        I2C.I2C,
+        I2C.STA,
+        I2C.OUT | totalLen,
+        ...addrBytes,
+        ...chunk,
+        I2C.STO,
+        I2C.END
+      ]);
+      if (autoIncReg) {
+        if (reg16bit) {
+          addrBytes[1] = ((reg + offset) >> 8) & 0xFF
+          addrBytes[2] = (reg + offset) & 0xFF
+        } else {
+          addrBytes[1] = (reg + offset) & 0xFF
+        }
+      }
       await this.device.transferOut(this.endpointOut, command);
     }
-    await this.I2CStop();
-    return result;
   }
 
   async WriteRegAddr(reg, reg16bit) {

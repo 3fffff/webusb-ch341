@@ -35,7 +35,6 @@ export class ICM20948 {
     static TEMP_OUT_H = 0x39
     static TEMP_OUT_L = 0x3A
 
-    // Offset and sensitivity - defined in electrical characteristics, and TEMP_OUT_H/L of datasheet
     static TEMPERATURE_DEGREES_OFFSET = 21
     static TEMPERATURE_SENSITIVITY = 333.87
     static ROOM_TEMP_OFFSET = 21
@@ -44,11 +43,11 @@ export class ICM20948 {
     static AK09916_CHIP_ID = 0x09
     static AK09916_WIA = 0x01
     static AK09916_ST1 = 0x10
-    static AK09916_ST1_DOR = 0b00000010   // Data overflow bit
-    static AK09916_ST1_DRDY = 0b00000001  // Data this.ready bit
+    static AK09916_ST1_DOR = 0b00000010
+    static AK09916_ST1_DRDY = 0b00000001
     static AK09916_HXL = 0x11
     static AK09916_ST2 = 0x18
-    static AK09916_ST2_HOFL = 0b00001000  // Magnetic sensor overflow bit
+    static AK09916_ST2_HOFL = 0b00001000
     static AK09916_CNTL2 = 0x31
     static AK09916_CNTL2_MODE = 0b00001111
     static AK09916_CNTL2_MODE_OFF = 0
@@ -62,202 +61,181 @@ export class ICM20948 {
 
     constructor(dev) {
         this.dev = dev;
+        this._bank = -1;
     }
-    
+
     async bank(value) {
-        //Switch register this.bank.
-        if (!this._bank == value) {
-            await this.dev.Write8Data(ICM20948.BANK_SEL, value << 4)
-            this._bank = value
+        if (this._bank !== value) {
+            await this.dev.Write8Data(ICM20948.BANK_SEL, value << 4);
+            this._bank = value;
         }
     }
 
     async setAccelerometerSampleRate(rate = 125) {
-        // Set the accelerometer sample rate in Hz.
-        await this.bank(2)
-        //  125Hz - 1.125 kHz / (1 + rate)
-        rate = parseInt((1125.0 / rate) - 1)
-        await this.dev.Write8Data(ICM20948.ACCEL_SMPLRT_DIV_1, (rate >> 8) & 0xff)
-        await this.dev.Write8Data(ICM20948.ACCEL_SMPLRT_DIV_2, rate & 0xff)
+        await this.bank(2);
+        rate = Math.floor((1125.0 / rate) - 1);
+        await this.dev.Write8Data(ICM20948.ACCEL_SMPLRT_DIV_1, (rate >> 8) & 0xff);
+        await this.dev.Write8Data(ICM20948.ACCEL_SMPLRT_DIV_2, rate & 0xff);
     }
 
     async setAccelerometerFullScale(scale = 16) {
-        //Set the accelerometer fulls cale range to +- the supplied value.
-        await this.bank(2)
-        let value = await this.dev.Read8Data(ICM20948.ACCEL_CONFIG) & 0b11111001
-        value |= 0b11 << 1//{ 2: 0b00, 4: 0b01, 8: 0b10, 16: 0b11 }[scale] << 1
-        await this.dev.Write8Data(ICM20948.ACCEL_CONFIG, value)
+        await this.bank(2);
+        let value = (await this.dev.Read8Data(ICM20948.ACCEL_CONFIG)) & 0b11111001;
+        value |= ({ 2: 0b00, 4: 0b01, 8: 0b10, 16: 0b11 }[scale] ?? 0b11) << 1;
+        await this.dev.Write8Data(ICM20948.ACCEL_CONFIG, value);
     }
 
     async setAccelerometerLowPass(enabled = true, mode = 5) {
-        //Configure the accelerometer low pass filter.
-        this.bank(2)
-        let value = await this.dev.Read8Data(ICM20948.ACCEL_CONFIG) & 0b10001110
-        if (enabled)
-            value |= 0b1
-        value |= (mode & 0x07) << 4
-        await this.dev.Write8Data(ICM20948.ACCEL_CONFIG, value)
+        await this.bank(2);
+        let value = (await this.dev.Read8Data(ICM20948.ACCEL_CONFIG)) & 0b10001110;
+        if (enabled) value |= 0b1;
+        value |= (mode & 0x07) << 4;
+        await this.dev.Write8Data(ICM20948.ACCEL_CONFIG, value);
     }
 
     async setGyroSampleRate(rate = 125) {
-        //Set the gyro sample rate in Hz.
-        await this.bank(2)
-        //# 125Hz sample rate - 1.125 kHz / (1 + rate)
-        rate = ~~((1125.0 / rate) - 1)
-        await this.dev.Write8Data(ICM20948.GYRO_SMPLRT_DIV, rate)
+        await this.bank(2);
+        rate = Math.floor((1125.0 / rate) - 1);
+        await this.dev.Write8Data(ICM20948.GYRO_SMPLRT_DIV, rate);
     }
+
     async setGyroFullScale(scale = 250) {
-        //Set the gyro full scale range to +- supplied value.
-        await this.bank(2)
-        let value = (await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1)) & 0b11111001
-        //console.log(value)
-        value |= 0b00 << 1//{ 250: 0b00, 500: 0b01, 1000: 0b10, 2000: 0b11 } << 1
-        await this.dev.Write8Data(ICM20948.GYRO_CONFIG_1, value)
+        await this.bank(2);
+        let value = (await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1)) & 0b11111001;
+        value |= ({ 250: 0b00, 500: 0b01, 1000: 0b10, 2000: 0b11 }[scale] ?? 0b00) << 1;
+        await this.dev.Write8Data(ICM20948.GYRO_CONFIG_1, value);
     }
 
     async setGyroLowPass(enabled = true, mode = 5) {
-        //Configure the gyro low pass filter.
-        await this.bank(2)
-        let value = (await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1)) & 0b10001110
-        if (enabled) value |= 0b1
-        value |= (mode & 0x07) << 4
-        await this.dev.Write8Data(ICM20948.GYRO_CONFIG_1, value)
+        await this.bank(2);
+        let value = (await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1)) & 0b10001110;
+        if (enabled) value |= 0b1;
+        value |= (mode & 0x07) << 4;
+        await this.dev.Write8Data(ICM20948.GYRO_CONFIG_1, value);
     }
 
     async magWrite(reg, value) {
-        //Write a byte to the slave magnetometer.
-        await this.bank(3)
-        await this.dev.Write8Data(ICM20948.I2C_SLV0_ADDR, ICM20948.AK09916_I2C_ADDR)  // Write one byte
-        await this.dev.Write8Data(ICM20948.I2C_SLV0_REG, reg)
-        await this.dev.Write8Data(ICM20948.I2C_SLV0_DO, value)
-        await this.bank(0)
-        await this.triggerMagIO()
+        await this.bank(3);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_ADDR, ICM20948.AK09916_I2C_ADDR);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_REG, reg);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_DO, value);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_CTRL, 0x80 | 1);
+        await this.bank(0);
+        await this.triggerMagIO();
+    }
+
+    async magReadBytes(reg, len = 1) {
+        await this.bank(3);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_ADDR, ICM20948.AK09916_I2C_ADDR | 0x80);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_REG, reg);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_CTRL, 0x80 | len);
+        await this.bank(0);
+        await this.triggerMagIO();
+        return await this.dev.ReadData(ICM20948.EXT_SLV_SENS_DATA_00, len);
     }
 
     async magRead(reg) {
-        //Read a byte from the slave magnetometer.
-        this.bank(3)
-        await await this.dev.Write8Data(ICM20948.I2C_SLV0_ADDR, ICM20948.AK09916_I2C_ADDR | 0x80)
-        await this.dev.Write8Data(ICM20948.I2C_SLV0_REG, reg)
-        await this.dev.Write8Data(ICM20948.I2C_SLV0_DO, 0xff)
-        await this.dev.Write8Data(ICM20948.I2C_SLV0_CTRL, 0x80 | 1)  // Read 1 byte
-
-        await this.bank(0)
-        await this.triggerMagIO()
-        return await this.dev.Read8Data(ICM20948.EXT_SLV_SENS_DATA_00)
+        await this.bank(3);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_ADDR, ICM20948.AK09916_I2C_ADDR | 0x80);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_REG, reg);
+        await this.dev.Write8Data(ICM20948.I2C_SLV0_CTRL, 0x80 | 1);
+        await this.bank(0);
+        await this.triggerMagIO();
+        return await this.dev.Read8Data(ICM20948.EXT_SLV_SENS_DATA_00);
     }
 
     async magnetometerReady() {
-        //Check the magnetometer status this.ready bit.
-        return await this.magRead(AK09916_ST1) & 0x01 > 0
+        return ((await this.magRead(ICM20948.AK09916_ST1)) & 0x01) > 0;
     }
 
-    async readMagnetometerData(timeout = 1.0) {
-        await this.magWrite(ICM20948.AK09916_CNTL2, 0x01)  // Trigger single measurement
-        //t_start = time.time()
-        while (!await this.magnetometerReady()) {
-            //if (time.time() - t_start > timeout)
-            //    new Error("Timeout waiting for Magnetometer Ready")
-            await this.dev.wait(5)
+    async readMagnetometerData(timeout = 1000) {
+        await this.magWrite(ICM20948.AK09916_CNTL2, ICM20948.AK09916_CNTL2_MODE_SINGLE);
+        const start = performance.now();
+        while (!(await this.magnetometerReady())) {
+            if (performance.now() - start > timeout) {
+                throw new Error("Timeout waiting for Magnetometer Ready");
+            }
+            await this.dev.wait(5);
         }
 
-        const data = await this.magRead_bytes(ICM20948.AK09916_HXL, 6)
-        console.log(data)
-        // Read ST2 to confirm this.dev.Read8Data finished,
-        // needed for continuous modes
-        // this.magRead(AK09916_ST2)
+        // Читаем 8 байт: HXL..HZH (6 байт) + dummy (1 байт) + ST2 (1 байт для разблокировки)
+        const data = await this.magReadBytes(ICM20948.AK09916_HXL, 8);
+        const view = new DataView(data);
 
-        /*let [x, y, z] = data
+        // В AK09916 данные хранятся в Little-Endian
+        const x = view.getInt16(0, true) * 0.15;
+        const y = view.getInt16(2, true) * 0.15;
+        const z = view.getInt16(4, true) * 0.15;
 
-        // Scale for magnetic flux density "uT"
-        // from section 3.3 of the datasheet
-        // This value is constant
-        x *= 0.15
-        y *= 0.15
-        z *= 0.15
-
-        return x, y, z*/
+        return [x, y, z];
     }
 
     async Init() {
-        this._bank = -1
+        this._bank = -1;
 
-        await this.bank(0)
-        console.log(await this.dev.Read8Data(ICM20948.WHO_AM_I))
-        if (await this.dev.Read8Data(ICM20948.WHO_AM_I) != ICM20948.CHIP_ID)
-            new Error("Unable to find ICM20948")
+        await this.bank(0);
+        const whoAmI = await this.dev.Read8Data(ICM20948.WHO_AM_I);
+        if (whoAmI !== ICM20948.CHIP_ID) {
+            throw new Error(`Unable to find ICM20948, got 0x${whoAmI.toString(16)}`);
+        }
 
-        await this.dev.Write8Data(ICM20948.PWR_MGMT_1, 0x80)
-        await this.dev.wait(1)
-        await this.dev.Write8Data(ICM20948.PWR_MGMT_1, 0x01)
-        await this.dev.Write8Data(ICM20948.PWR_MGMT_2, 0x00)
+        await this.dev.Write8Data(ICM20948.PWR_MGMT_1, 0x80);
+        await this.dev.wait(10);
+        await this.dev.Write8Data(ICM20948.PWR_MGMT_1, 0x01);
+        await this.dev.Write8Data(ICM20948.PWR_MGMT_2, 0x00);
 
-        await this.bank(2)
+        await this.setGyroSampleRate(100);
+        await this.setGyroLowPass(true, 5);
+        await this.setGyroFullScale(250);
 
-        await this.setGyroSampleRate(100)
-        await this.setGyroLowPass(true, 5)
-        await this.setGyroFullScale(250)
+        await this.setAccelerometerSampleRate(125);
+        await this.setAccelerometerLowPass(true, 5);
+        await this.setAccelerometerFullScale(16);
 
-        await this.setAccelerometerSampleRate(125)
-        await this.setAccelerometerLowPass(true, 5)
-        await this.setAccelerometerFullScale(16)
+        await this.bank(2);
+        const accelScaleIdx = ((await this.dev.Read8Data(ICM20948.ACCEL_CONFIG)) & 0x06) >> 1;
+        const gyroScaleIdx = ((await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1)) & 0x06) >> 1;
+        this.accelDiv = [16384.0, 8192.0, 4096.0, 2048.0][accelScaleIdx];
+        this.gyroDiv = [131.0, 65.5, 32.8, 16.4][gyroScaleIdx];
+        await this.bank(0);
 
-        /* await this.bank(0)
-         await this.dev.Write8Data(ICM20948.INT_PIN_CFG, 0x30)
- 
-         await this.bank(3)
-         await this.dev.Write8Data(ICM20948.I2C_MST_CTRL, 0x4D)
-         await this.dev.Write8Data(ICM20948.I2C_MST_DELAY_CTRL, 0x01)*/
+        await this.dev.Write8Data(ICM20948.INT_PIN_CFG, 0x00);
 
-        /*if (!await this.magRead(ICM20948.AK09916_WIA) == ICM20948.AK09916_CHIP_ID)
-            new Error("Unable to find AK09916")
+        await this.bank(3);
+        await this.dev.Write8Data(ICM20948.I2C_MST_CTRL, 0x07); // 400 кГц для внутреннего I2C мастера
+        await this.dev.Write8Data(ICM20948.I2C_MST_DELAY_CTRL, 0x01);
+
+        const magWhoAmI = await this.magRead(ICM20948.AK09916_WIA);
+        if (magWhoAmI !== ICM20948.AK09916_CHIP_ID) {
+            throw new Error(`Unable to find AK09916, got 0x${magWhoAmI.toString(16)}`);
+        }
 
         // Reset the magnetometer
-        await this.magWrite(ICM20948.AK09916_CNTL3, 0x01)
-        while (!await this.magRead(ICM20948.AK09916_CNTL3) == 0x01)
-            await this.dev.wait(10)*/
+        await this.magWrite(ICM20948.AK09916_CNTL3, 0x01);
+        while (((await this.magRead(ICM20948.AK09916_CNTL3)) & 0x01) !== 0) {
+            await this.dev.wait(10);
+        }
     }
+
     async readAccelerometerGyroData() {
-        await this.bank(0)
-        const data = await this.dev.ReadData(ICM20948.ACCEL_XOUT_H, 12)
+        await this.bank(0);
+        const data = await this.dev.ReadData(ICM20948.ACCEL_XOUT_H, 12);
         const view = new DataView(data);
-        let ax = view.getInt16(0, false);
-        let ay = view.getInt16(2, false);
-        let az = view.getInt16(4, false);
-        let gx = view.getInt16(6, false);
-        let gy = view.getInt16(8, false);
-        let gz = view.getInt16(10, false);
+        let ax = view.getInt16(0, false) / this.accelDiv;
+        let ay = view.getInt16(2, false) / this.accelDiv;
+        let az = view.getInt16(4, false) / this.accelDiv;
+        let gx = view.getInt16(6, false) / this.gyroDiv;
+        let gy = view.getInt16(8, false) / this.gyroDiv;
+        let gz = view.getInt16(10, false) / this.gyroDiv;
 
-        await this.bank(2)
-
-        //Read accelerometer full scale range and
-        // use it to compensate the this.reading to gs
-        let scale = (await this.dev.Read8Data(ICM20948.ACCEL_CONFIG) & 0x06) >> 1
-
-        // scale ranges from section 3.2 of the datasheet
-        const gs = [16384.0, 8192.0, 4096.0, 2048.0]//.map(v => v * scale)
-
-        ax /= gs[scale]
-        ay /= gs[scale]
-        az /= gs[scale]
-
-        // Read back the degrees per second rate and
-        // use it to compensate the this.reading to dps
-        scale = (await this.dev.Read8Data(ICM20948.GYRO_CONFIG_1) & 0x06) >> 1
-
-        // scale ranges from section 3.1 of the datasheet
-        const dps = [131, 65.5, 32.8, 16.4]//.map(v => v * scale)
-
-        gx /= dps[scale]
-        gy /= dps[scale]
-        gz /= dps[scale]
-        return [ax, ay, az, gx, gy, gz]
+        return [ax, ay, az, gx, gy, gz];
     }
 
     async triggerMagIO() {
-        const user = await this.dev.Read8Data(ICM20948.USER_CTRL)
-        await this.dev.Write8Data(ICM20948.USER_CTRL, user | 0x20)
-        await this.dev.wait(5)
-        await this.dev.Write8Data(ICM20948.USER_CTRL, user)
+        await this.bank(0);
+        const user = await this.dev.Read8Data(ICM20948.USER_CTRL);
+        await this.dev.Write8Data(ICM20948.USER_CTRL, user | 0x20);
+        await this.dev.wait(5);
+        await this.dev.Write8Data(ICM20948.USER_CTRL, user);
     }
 }

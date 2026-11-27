@@ -162,7 +162,7 @@ export class CH341 {
   async readPin(number) {
     const command = new Uint8Array([CH341.CMD_UIO_STREAM, CH341.CMD_UIO_STM_IN, CH341.CMD_UIO_STM_END])
     await this.device.transferOut(this.endpointOut, command);
-    const request = await this.receiveBytes()
+    const request = await this.receiveBytes(1)
     const result = new Uint8Array(request)
     return (result[0] & (1 << number));
   }
